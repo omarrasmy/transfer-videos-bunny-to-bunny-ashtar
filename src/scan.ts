@@ -1,0 +1,200 @@
+import type { RowDataPacket } from 'mysql2';
+import { config } from './config.js';
+import { blbQuery, tExec, tQuery } from './db.js';
+import { populateSecondDbMap } from './seconddb.js';
+import { log } from './logger.js';
+
+export type Linkage = 'subject' | 'lesson' | 'union';
+
+interface ActivityRow extends RowDataPacket {
+  id: number;
+  bunny_video_id: string | null;
+  bunny_library_id: number | null;
+  bunny_collection_id: string | null;
+  title: string | null;
+}
+
+function selectionSql(linkage: Linkage): string {
+  const t = config.teachers.map(() => '?').join(',');
+  const subj = `SELECT a.id, a.bunny_video_id, a.bunny_library_id, a.bunny_collection_id, a.title
+                  FROM activities a JOIN subjects s ON a.subject = s.id
+                 WHERE a.type = ? AND s.teacher IN (${t})`;
+  const less = `SELECT a.id, a.bunny_video_id, a.bunny_library_id, a.bunny_collection_id, a.title
+                  FROM activities a JOIN lessons l ON a.lesson = l.id JOIN subjects s2 ON l.subject = s2.id
+                 WHERE a.type = ? AND s2.teacher IN (${t})`;
+  if (linkage === 'subject') return subj;
+  if (linkage === 'lesson') return less;
+  // union: dedupe activity ids across both paths
+  return `SELECT id, bunny_video_id, bunny_library_id, bunny_collection_id, title FROM (
+            ${subj} UNION ${less}
+          ) u`;
+}
+
+function selectionParams(linkage: Linkage): unknown[] {
+  const one = [config.activityType, ...config.teachers];
+  return linkage === 'union' ? [...one, ...one] : one;
+}
+
+export interface ScanSummary {
+  linkage: Linkage;
+  totalActivityRows: number;
+  rowsNoVideo: number;
+  rowsAlreadyInDest: number;
+  rowsUnknownLibrary: number;
+  distinctVideos: number;
+  jobsByLibrary: Record<string, number>;
+  jobsCreated: number;
+  jobsExisting: number;
+  jobsSkippedNoCreds: number;
+  includedActivityIds: number;
+  secondDbJobsFlagged: number;
+  secondDbRowsMapped: number;
+}
+
+/** Scan blb for the selection, dedupe by (library, guid), upsert jobs + activity map. */
+export async function scan(linkage: Linkage = (process.env.LINKAGE as Linkage) || 'union'): Promise<ScanSummary> {
+  const rows = await blbQuery<ActivityRow[]>(selectionSql(linkage), selectionParams(linkage));
+
+  // Force-include explicit activity ids (targeted tests), regardless of teacher.
+  let includedActivityIds = 0;
+  if (config.includeActivityIds.length) {
+    const ph = config.includeActivityIds.map(() => '?').join(',');
+    const extra = await blbQuery<ActivityRow[]>(
+      `SELECT a.id, a.bunny_video_id, a.bunny_library_id, a.bunny_collection_id, a.title
+         FROM activities a WHERE a.type = ? AND a.id IN (${ph})`,
+      [config.activityType, ...config.includeActivityIds],
+    );
+    const seen = new Set(rows.map((r) => r.id));
+    for (const e of extra) if (!seen.has(e.id)) { rows.push(e); includedActivityIds++; }
+  }
+
+  const summary: ScanSummary = {
+    linkage,
+    totalActivityRows: rows.length,
+    rowsNoVideo: 0,
+    rowsAlreadyInDest: 0,
+    rowsUnknownLibrary: 0,
+    distinctVideos: 0,
+    jobsByLibrary: {},
+    jobsCreated: 0,
+    jobsExisting: 0,
+    jobsSkippedNoCreds: 0,
+    includedActivityIds,
+    secondDbJobsFlagged: 0,
+    secondDbRowsMapped: 0,
+  };
+
+  // group by (lib, guid)
+  interface Group { lib: number; guid: string; collection: string | null; title: string | null; activityIds: number[]; }
+  const groups = new Map<string, Group>();
+
+  for (const r of rows) {
+    const guid = (r.bunny_video_id ?? '').trim();
+    if (!guid) { summary.rowsNoVideo++; continue; }
+    if (r.bunny_library_id == null) { summary.rowsNoVideo++; continue; }
+    if (r.bunny_library_id === config.dest.id) { summary.rowsAlreadyInDest++; continue; }
+
+    const key = `${r.bunny_library_id}::${guid}`;
+    let g = groups.get(key);
+    if (!g) {
+      g = { lib: r.bunny_library_id, guid, collection: r.bunny_collection_id, title: r.title, activityIds: [] };
+      groups.set(key, g);
+    }
+    if (!g.title && r.title) g.title = r.title;
+    if (!g.collection && r.bunny_collection_id) g.collection = r.bunny_collection_id;
+    g.activityIds.push(r.id);
+  }
+
+  summary.distinctVideos = groups.size;
+  const guidToJobId = new Map<string, number>();
+
+  for (const g of groups.values()) {
+    summary.jobsByLibrary[g.lib] = (summary.jobsByLibrary[g.lib] ?? 0) + 1;
+    const creds = config.sources.get(g.lib);
+    const hasCreds = !!creds && !!creds.apiKey && !!creds.cdnHost;
+    if (!hasCreds) { summary.jobsSkippedNoCreds++; summary.rowsUnknownLibrary += g.activityIds.length; }
+
+    const initialState = hasCreds ? 'pending' : 'skipped';
+    const initialError = hasCreds ? null : `no source credentials configured for library ${g.lib}`;
+
+    // Upsert job. On duplicate, DO NOT touch state / new_video_guid / progress columns.
+    const res = await tExec(
+      `INSERT INTO bunny_transfer_jobs
+         (source_library_id, source_video_guid, source_collection_id, title,
+          dest_library_id, dest_collection_id, state, activity_count, error)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         title = VALUES(title),
+         source_collection_id = VALUES(source_collection_id),
+         activity_count = VALUES(activity_count)`,
+      [g.lib, g.guid, g.collection, g.title?.slice(0, 700) ?? null,
+       config.dest.id, config.dest.collectionId, initialState, g.activityIds.length, initialError],
+    );
+    if (res.affectedRows === 1) summary.jobsCreated++; else summary.jobsExisting++;
+
+    // get job id
+    const idRows = await tQuery<(RowDataPacket & { id: number })[]>(
+      `SELECT id FROM bunny_transfer_jobs WHERE source_library_id = ? AND source_video_guid = ?`,
+      [g.lib, g.guid],
+    );
+    const jobId = idRows[0]?.id;
+    if (!jobId) continue;
+    // Key by (sourceLib, guid) so a guid shared across source libraries maps to the correct job.
+    guidToJobId.set(`${g.lib}::${g.guid}`, jobId);
+
+    // upsert activity map rows (preserve 'updated' status)
+    for (const aid of g.activityIds) {
+      // On re-home (job_id or source guid changed) reset to a clean pending state so a stale
+      // 'updated' marker can never satisfy a delete gate for the wrong job. Order matters: the
+      // status/new_* IFs are evaluated before old_video_guid/job_id are overwritten.
+      await tExec(
+        `INSERT INTO bunny_transfer_activity_map
+           (job_id, activity_id, old_library_id, old_video_guid, old_collection_id, status)
+         VALUES (?, ?, ?, ?, ?, 'pending')
+         ON DUPLICATE KEY UPDATE
+           status = IF(job_id <> VALUES(job_id) OR old_video_guid <> VALUES(old_video_guid), 'pending', status),
+           new_library_id = IF(job_id <> VALUES(job_id) OR old_video_guid <> VALUES(old_video_guid), NULL, new_library_id),
+           new_video_guid = IF(job_id <> VALUES(job_id) OR old_video_guid <> VALUES(old_video_guid), NULL, new_video_guid),
+           old_library_id = VALUES(old_library_id),
+           old_collection_id = VALUES(old_collection_id),
+           old_video_guid = VALUES(old_video_guid),
+           job_id = VALUES(job_id)`,
+        [jobId, aid, g.lib, g.guid, g.collection],
+      );
+    }
+  }
+
+  // Re-open completed jobs that have gained new (un-migrated) activity rows since they finished.
+  // They resume from polling (new_video_guid is set) and repoint only the new pending rows.
+  const reopened = await tExec(
+    `UPDATE bunny_transfer_jobs j
+        SET state = 'pending', worker_id = NULL, attempts = 0, error = NULL
+      WHERE state = 'done'
+        AND EXISTS (SELECT 1 FROM bunny_transfer_activity_map m WHERE m.job_id = j.id AND m.status <> 'updated')`,
+  );
+  if (reopened.affectedRows > 0) {
+    await log.info(`re-opened ${reopened.affectedRows} done job(s) with new un-migrated activities`, { event: 'scan_reopen' });
+  }
+
+  // Leg 2: detect which source videos are also referenced in the second DB.
+  if (config.enableSecondDb) {
+    const second = await populateSecondDbMap(guidToJobId);
+    summary.secondDbJobsFlagged = second.jobsFlagged;
+    summary.secondDbRowsMapped = second.rowsMapped;
+    await log.info(`second-DB: ${second.jobsFlagged} videos also referenced there, ${second.rowsMapped} rows mapped`, { event: 'scan2' });
+    // A re-opened/leg-2 job that is 'done' but now has pending second-DB rows must run again.
+    await tExec(
+      `UPDATE bunny_transfer_jobs j SET state='pending', worker_id=NULL, attempts=0, error=NULL
+        WHERE state='done' AND second_db_present=1
+          AND EXISTS (SELECT 1 FROM bunny_transfer_seconddb_map m WHERE m.job_id=j.id AND m.status<>'updated')`,
+    );
+  }
+
+  await log.info(
+    `scan(${linkage}): ${summary.distinctVideos} distinct videos from ${summary.totalActivityRows} rows ` +
+    `(created ${summary.jobsCreated}, existing ${summary.jobsExisting}, no-creds ${summary.jobsSkippedNoCreds}, ` +
+    `no-video ${summary.rowsNoVideo}, already-dest ${summary.rowsAlreadyInDest})`,
+    { event: 'scan', data: summary },
+  );
+  return summary;
+}

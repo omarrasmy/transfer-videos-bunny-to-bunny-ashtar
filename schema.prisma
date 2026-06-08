@@ -1,0 +1,3691 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = "mysql://root:k3FKOmRSM5EIN1aOxRn@34.121.162.197:3306/blb?schema=public&connection_limit=100&pool_timeout=300"
+}
+
+model activities {
+  id                  Int     @id @default(autoincrement())
+  title               String? @db.VarChar(255)
+  type                String? @db.VarChar(255)
+  link                String? @db.VarChar(255)
+  order               Int?
+  lesson              Int?
+  ref                 Int?
+  questions           Int?
+  standard            Int?
+  price_type          String? @db.VarChar(255)
+  price               Int?
+  description         String? @db.Text
+  bunny_library_id    String? @db.VarChar(50)
+  bunny_video_id      String? @db.VarChar(100)
+  firebase_link       String? @db.VarChar(255)
+  bunny_collection_id String? @db.VarChar(255)
+  video_time          Int?
+}
+
+model activity_enrollments {
+  id              Int       @id @default(autoincrement())
+  activity        Int?
+  student         Int?
+  enrollment_date DateTime? @db.DateTime(6)
+}
+
+model activity_grades {
+  id       Int  @id @default(autoincrement())
+  activity Int?
+  grade    Int?
+}
+
+model admission_status {
+  id          Int           @id @default(autoincrement())
+  title       String?       @db.VarChar(255)
+  type        String?       @db.VarChar(255)
+  candidates  candidates[]
+  status_logs status_logs[]
+}
+
+model answers {
+  id              Int          @id @default(autoincrement())
+  student         Int?
+  question        Int?
+  option          Int?
+  answer_type     String?      @db.VarChar(50)
+  answer          String?      @db.Text
+  activity        String?      @db.VarChar(100)
+  refrance        Int?
+  grade           Float?
+  feedback        String?      @db.VarChar(255)
+  submission_date DateTime?    @db.DateTime(0)
+  duration        Int?
+  answered        Boolean?
+  questions       questions?   @relation(fields: [question], references: [id], onDelete: Cascade, map: "answer_questions")
+  submissions     submissions? @relation(fields: [refrance], references: [id], onDelete: Cascade, map: "answer_submission")
+  students        students?    @relation(fields: [student], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_answer_student_id")
+
+  @@index([question], map: "answer_questions")
+  @@index([refrance], map: "answer_submission")
+  @@index([student], map: "fk_answer_student_id_idx")
+}
+
+model applicants {
+  id        Int     @id @default(autoincrement())
+  vacancies Int?
+  firstname String? @db.VarChar(100)
+  lastname  String? @db.VarChar(100)
+  email     String? @db.VarChar(200)
+  mobile    String? @db.VarChar(20)
+  cv        String? @db.VarChar(255)
+  status    Int?
+  comments  String? @db.VarChar(255)
+}
+
+model appraisals {
+  id         Int     @id @default(autoincrement())
+  title      String? @db.VarChar(255)
+  start_date String? @db.VarChar(100)
+  end_date   String? @db.VarChar(100)
+}
+
+model assignment_questions {
+  id         Int  @id @default(autoincrement())
+  assignment Int?
+  question   Int?
+  weight     Int?
+}
+
+model assignment_random {
+  id          Int          @id @default(autoincrement())
+  assignment  Int?
+  lesson      Int?
+  tag         Int?
+  questions   Int?
+  assignments assignments? @relation(fields: [assignment], references: [id], onDelete: Cascade, map: "assignmgnts_random")
+  lessons     lessons?     @relation(fields: [lesson], references: [id], onDelete: Cascade, map: "random_lessosn")
+
+  @@index([assignment], map: "assignmgnts_random")
+  @@index([lesson], map: "random_lessosn")
+}
+
+model assignments {
+  id                            Int                             @id @default(autoincrement())
+  title                         String?                         @db.VarChar(255)
+  type                          String?                         @db.VarChar(100)
+  subject                       Int?
+  lesson                        Int?
+  grade                         Int?
+  non_graded                    Boolean?
+  classroom                     Int?
+  isblended                     Boolean?
+  isopened                      Boolean?
+  image                         String?                         @db.VarChar(255)
+  file                          String?                         @db.VarChar(255)
+  video                         String?                         @db.VarChar(255)
+  sound                         String?                         @db.VarChar(255)
+  link                          String?                         @db.VarChar(255)
+  weight                        Int?
+  difficulty                    Int?
+  bloom                         String?                         @db.VarChar(50)
+  dok                           String?                         @db.VarChar(50)
+  duration                      Int?
+  questions_count               Int?
+  tag                           Int?
+  attend_date                   String?                         @db.VarChar(100)
+  open_date                     String?                         @db.VarChar(100)
+  close_date                    String?                         @db.VarChar(100)
+  cutoff_date                   String?                         @db.VarChar(100)
+  extend_date                   String?                         @db.VarChar(100)
+  breakdown                     Int?
+  pass_enrichment               Boolean?
+  description                   String?                         @db.VarChar(255)
+  academic_year                 Int?
+  grade_subject                 Int?
+  week                          Int?
+  check_plagiarism              Boolean?                        @default(false)
+  lesson_resource_id            Int?
+  assignment_benchmark_standard assignment_benchmark_standard[]
+  assignment_random             assignment_random[]
+  years                         years?                          @relation(fields: [academic_year], references: [id], onDelete: Restrict, map: "FK_academic_year_idx")
+  classrooms                    classrooms?                     @relation(fields: [classroom], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "attend_classroom")
+  breakdowns                    breakdowns?                     @relation(fields: [breakdown], references: [id], onDelete: Restrict, map: "breakdown_id")
+  lesson_resources              lesson_resources?               @relation(fields: [lesson_resource_id], references: [id], onDelete: Cascade, map: "fk_assignments_lesson_resource_id")
+  subjects                      subjects?                       @relation(fields: [subject], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_subject_idx")
+  lessons                       lessons?                        @relation(fields: [lesson], references: [id], onDelete: Cascade, map: "lessons")
+  weeks                         weeks?                          @relation(fields: [week], references: [id], onDelete: Restrict, map: "week")
+  weights                       weights?                        @relation(fields: [weight], references: [id], onDelete: Cascade, map: "weight")
+  assignments_details           assignments_details[]
+  lesson_plan_details           lesson_plan_details[]
+  lesson_resource_sections      lesson_resource_sections[]
+  lessons_reports_details       lessons_reports_details[]
+  sections_questions            sections_questions[]
+  students                      students[]
+  submissions                   submissions[]
+  turnitin_submissions          turnitin_submissions[]
+
+  @@index([academic_year], map: "FK_academic_year_idx_idx")
+  @@index([classroom], map: "attend_classroom")
+  @@index([breakdown], map: "breakdown")
+  @@index([close_date], map: "close_date")
+  @@index([id], map: "idx_assignments_id")
+  @@index([lesson], map: "lessons")
+  @@index([non_graded], map: "non_graded")
+  @@index([open_date], map: "open_date")
+  @@index([subject], map: "subject")
+  @@index([week], map: "week_idx")
+  @@index([weight], map: "weight")
+  @@index([isblended], map: "index_isblended")
+  @@index([lesson_resource_id], map: "fk_assignments_lesson_resource_id_idx")
+  @@fulltext([type], map: "type")
+}
+
+model assignments_details {
+  id          Int          @id @default(autoincrement())
+  assignment  Int?
+  description String?      @db.Text
+  reading     String?      @db.Text
+  assignments assignments? @relation(fields: [assignment], references: [id], onDelete: Cascade, map: "assignments_details")
+
+  @@index([assignment], map: "assignments_details")
+}
+
+model attendance_submissions {
+  id         Int     @id @default(autoincrement())
+  attendance Int?
+  student    Int?
+  status     String? @db.VarChar(50)
+}
+
+model attendances {
+  id          Int      @id @default(autoincrement())
+  attend_date String?  @db.VarChar(100)
+  subject     Int?
+  grade       Int?
+  weight      Int?
+  breakdown   Int?
+  weights     weights? @relation(fields: [weight], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "attendances_ibfk_1")
+
+  @@index([weight], map: "weight")
+}
+
+model banks {
+  id               Int                @id @default(autoincrement())
+  title            String?            @db.VarChar(100)
+  acc_no           String?            @db.VarChar(100)
+  description      String?            @db.VarChar(255)
+  pending_payments pending_payments[]
+}
+
+model batches_students {
+  id      Int     @id @default(autoincrement())
+  batch   Int?
+  student Int?
+  seat_no String? @db.VarChar(50)
+  room    Int?
+}
+
+model batches_subjects {
+  id            Int       @id @default(autoincrement())
+  student_batch Int?
+  subject       Int?
+  code          String?   @db.VarChar(50)
+  grade         Float?    @db.Float
+  editor        Int?
+  edit_date     DateTime? @db.DateTime(6)
+}
+
+model branch_weeks {
+  id        Int       @id @default(autoincrement())
+  branch_id Int?
+  week_id   Int?
+  branches  branches? @relation(fields: [branch_id], references: [id], onDelete: Cascade, map: "fk_branch_id_x")
+  weeks     weeks?    @relation(fields: [week_id], references: [id], onDelete: Cascade, map: "fk_week_id")
+
+  @@index([branch_id], map: "fk_branch_id_x_idx")
+  @@index([week_id], map: "fk_week_id_idx")
+}
+
+model branches {
+  id                                                         Int                     @id @default(autoincrement())
+  title                                                      String?                 @db.VarChar(255)
+  system_id                                                  Int?
+  location                                                   String?                 @db.VarChar(255)
+  ref                                                        String?                 @db.VarChar(255)
+  gender                                                     String?                 @db.VarChar(255)
+  school                                                     Int?
+  interval                                                   Int?
+  days_off                                                   String?                 @db.VarChar(255)
+  icon                                                       String?                 @db.VarChar(255)
+  admission                                                  Int?
+  season                                                     Int?
+  admission_open_date                                        String?                 @db.VarChar(255)
+  admission_close_date                                       String?                 @db.VarChar(255)
+  admission_open_time                                        String?                 @db.VarChar(255)
+  admission_close_time                                       String?                 @db.VarChar(255)
+  notification                                               Int?
+  image                                                      String?                 @db.VarChar(255)
+  address                                                    String?                 @db.VarChar(255)
+  school_map                                                 String?                 @db.VarChar(300)
+  mirror                                                     Int?
+  department                                                 Int?
+  domain                                                     String?                 @db.VarChar(100)
+  director                                                   String?                 @db.VarChar(200)
+  username                                                   String?                 @db.VarChar(45)
+  password                                                   String?                 @db.VarChar(45)
+  klickit_external                                           Int?
+  announcement_branch                                        announcement_branch[]
+  branch_weeks                                               branch_weeks[]
+  systems                                                    systems?                @relation(fields: [system_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_branches_system_id")
+  candidates                                                 candidates[]
+  cqrs_subjects_overall                                      cqrs_subjects_overall[]
+  employees_branches                                         employees_branches[]
+  gamification_requests                                      gamification_requests[]
+  grades                                                     grades[]
+  hr_candidates                                              hr_candidates[]
+  pending_payments                                           pending_payments[]
+  school_fees                                                school_fees[]
+  stages                                                     stages[]
+  students                                                   students[]
+  students_transfers_students_transfers_new_branchTobranches students_transfers[]    @relation("students_transfers_new_branchTobranches")
+  students_transfers_students_transfers_branchTobranches     students_transfers[]    @relation("students_transfers_branchTobranches")
+  survey_branch                                              survey_branch[]
+
+  @@index([system_id], map: "fk_branches_system_id_idx")
+  @@fulltext([title], map: "branch_title")
+}
+
+model breakdowns {
+  id          Int           @id @default(autoincrement())
+  school      Int?
+  title       String?       @db.VarChar(255)
+  order       Int?
+  lock        Boolean?      @default(false)
+  exam_lock   Boolean?      @default(false)
+  assignments assignments[]
+  lessons     lessons[]
+}
+
+model buildings {
+  id    Int     @id @default(autoincrement())
+  title String? @db.VarChar(100)
+}
+
+model candidate_status {
+  id              Int               @id @default(autoincrement())
+  title           String?           @db.VarChar(255)
+  type            String?           @db.VarChar(255)
+  candidates_logs candidates_logs[]
+  hr_candidates   hr_candidates[]
+}
+
+model candidates {
+  id                         Int                  @id @default(autoincrement())
+  uid                        String?              @db.VarChar(10)
+  firstname                  String?              @db.VarChar(100)
+  lastname                   String?              @db.VarChar(100)
+  gender                     String?              @db.VarChar(100)
+  secondlanguage             String?              @db.VarChar(100)
+  religion                   String?              @db.VarChar(100)
+  phone                      String?              @db.VarChar(100)
+  mobile                     String?              @db.VarChar(100)
+  email                      String?              @db.VarChar(100)
+  branch                     Int?
+  grade                      Int?
+  cohort                     Int?
+  citizenship                String?              @db.VarChar(100)
+  withdraw                   Boolean?
+  points                     Int?
+  date_of_birth              String?              @db.VarChar(255)
+  image                      String?              @db.VarChar(255)
+  address                    String?              @db.VarChar(255)
+  preschool                  String?              @db.VarChar(100)
+  father_firstname           String?              @db.VarChar(100)
+  father_lastname            String?              @db.VarChar(100)
+  father_mobile              String?              @db.VarChar(100)
+  father_email               String?              @db.VarChar(100)
+  father_degree              String?              @db.VarChar(100)
+  father_company             String?              @db.VarChar(100)
+  father_occupation          String?              @db.VarChar(100)
+  mother_firstname           String?              @db.VarChar(100)
+  mother_lastname            String?              @db.VarChar(100)
+  mother_mobile              String?              @db.VarChar(100)
+  mother_email               String?              @db.VarChar(100)
+  mother_degree              String?              @db.VarChar(100)
+  mother_company             String?              @db.VarChar(100)
+  mother_occupation          String?              @db.VarChar(100)
+  previous_school            String?              @db.VarChar(100)
+  havesibling                String?              @db.VarChar(50)
+  parentsEmployee            String?              @db.VarChar(50)
+  username                   String?              @db.VarChar(100)
+  password                   String?              @db.VarChar(100)
+  national_id                String?              @db.VarChar(100)
+  father_nationalid          String?              @db.VarChar(100)
+  mother_nationalid          String?              @db.VarChar(100)
+  application_date           String?              @db.VarChar(100)
+  application_time           String?              @db.VarChar(100)
+  admission_date             String?              @db.VarChar(100)
+  admission_time             String?              @db.VarChar(100)
+  status                     Int?
+  academic_year              Int?
+  notes                      String?              @db.Text
+  emergency_contact_name     String?              @db.VarChar(255)
+  emergency_contact_number   String?              @db.VarChar(45)
+  emergency_contact_relation String?              @db.VarChar(45)
+  full_arabic_name           String?              @db.VarChar(350)
+  mother_arabic_name         String?              @db.VarChar(350)
+  submitted_at               DateTime?            @default(now()) @db.Timestamp(0)
+  hear_about_us              String?              @db.VarChar(255)
+  hear_about_us_social_media String?              @db.VarChar(255)
+  hear_about_us_referral     String?              @db.VarChar(255)
+  hear_about_us_other        String?              @db.VarChar(255)
+  father_birthdate           String?              @db.VarChar(255)
+  mother_birthdate           String?              @db.VarChar(255)
+  years                      years?               @relation(fields: [academic_year], references: [id], onDelete: Cascade, map: "Fk_academic_year_id")
+  branches                   branches?            @relation(fields: [branch], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "branchs")
+  grades                     grades?              @relation(fields: [grade], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "grad_levels")
+  admission_status           admission_status?    @relation(fields: [status], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "status")
+  fees_admission             fees_admission[]
+  payments_admission         payments_admission[]
+
+  @@index([branch], map: "branchs")
+  @@index([academic_year], map: "fk_academic_year_idx")
+  @@index([grade], map: "grad_levels")
+  @@index([status], map: "status")
+}
+
+model candidates_logs {
+  id                 Int               @id @default(autoincrement())
+  candidate_id       Int?
+  status_id          Int?
+  created_date       DateTime?         @db.Date
+  interviewer_id     Int?
+  interview_date     String?           @db.VarChar(255)
+  interview_time     String?           @db.VarChar(255)
+  interview_comments String?           @db.VarChar(500)
+  comment            String?           @db.VarChar(255)
+  hr_candidates      hr_candidates?    @relation(fields: [candidate_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "cand_app")
+  candidate_status   candidate_status? @relation(fields: [status_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "cand_state_log")
+
+  @@index([candidate_id], map: "cand_app")
+  @@index([status_id], map: "cand_state_log")
+}
+
+model categories {
+  id          Int     @id @default(autoincrement())
+  title       String? @db.VarChar(100)
+  image       String? @db.VarChar(255)
+  description String? @db.VarChar(255)
+}
+
+model chat_logs {
+  id          Int       @id @default(autoincrement())
+  chat_id     Int?
+  message_id  Int?
+  sender_id   Int?
+  employee_id Int?
+  message     String?   @db.Text
+  sender_ip   String?   @db.VarChar(255)
+  action      String?   @db.VarChar(45)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model chats {
+  id                Int                 @id @default(autoincrement())
+  target            String?             @db.VarChar(100)
+  sender            Int?
+  student           Int?
+  subject           Int?
+  chatName          String?             @db.VarChar(100)
+  chat_message      String?             @db.VarChar(255)
+  chat_type         String?             @db.VarChar(100)
+  classRoom         Int?
+  created_at        DateTime?           @default(now()) @db.Timestamp(0)
+  gradeLevel        Int?
+  updated_at        DateTime?           @db.Timestamp(0)
+  classrooms        classrooms?         @relation(fields: [classRoom], references: [id], onDelete: Cascade, map: "fk_classroom_id")
+  grades            grades?             @relation(fields: [gradeLevel], references: [id], onDelete: Cascade, map: "fk_grade_level_id")
+  students          students?           @relation(fields: [student], references: [id], onDelete: Cascade, map: "fk_student_idx")
+  subjects          subjects?           @relation(fields: [subject], references: [id], onDelete: Cascade, map: "fk_subject_id")
+  chats_grouping    chats_grouping[]
+  messages          messages[]
+  messages_grouping messages_grouping[]
+
+  @@index([gradeLevel], map: "Fk_grade_id_idx")
+  @@index([classRoom], map: "fk_classroom_id_idx")
+  @@index([gradeLevel], map: "fk_grade_idx_idx")
+  @@index([student], map: "fk_student_idx_idx")
+  @@index([subject], map: "fk_subject_id_idx")
+}
+
+model chats_grouping {
+  id         Int     @id @default(autoincrement())
+  chat       Int?
+  gradeLevel Int?
+  chats      chats?  @relation(fields: [chat], references: [id], onDelete: Cascade, map: "chat")
+  grades     grades? @relation(fields: [gradeLevel], references: [id], onDelete: Cascade, map: "grade_level")
+
+  @@index([chat], map: "chat_idx")
+  @@index([gradeLevel], map: "grade_level_idx")
+}
+
+model cities {
+  id              Int               @id @default(autoincrement())
+  name            String            @unique(map: "name_UNIQUE") @db.VarChar(100)
+  vendor_branches vendor_branches[]
+}
+
+model classrooms {
+  id                    Int                     @id @default(autoincrement())
+  title                 String?                 @db.VarChar(255)
+  room                  String?                 @db.VarChar(255)
+  capacity              Int?
+  grade_id              Int?
+  openned_blended       Int?
+  timetable             String?                 @db.VarChar(255)
+  classwork_id          Int?
+  assignments           assignments[]
+  chats                 chats[]
+  grades                grades?                 @relation(fields: [grade_id], references: [id], onDelete: Cascade, map: "grade_id")
+  employees_classrooms  employees_classrooms[]
+  gamification_requests gamification_requests[]
+  lesson_plan_classroom lesson_plan_classroom[]
+  lesson_resources      lesson_resources[]
+  lives                 lives[]
+  students              students[]
+  students_subjects     students_subjects[]
+
+  @@index([id], map: "classroom_id")
+  @@index([grade_id], map: "classrooms_grade_id_fkey")
+  @@index([classwork_id], map: "fk_classrooms_classwork_id_idx")
+}
+
+model clubs {
+  id    Int     @id @default(autoincrement())
+  title String? @db.VarChar(255)
+  type  String? @db.VarChar(100)
+}
+
+model cohort_subjects {
+  id          Int       @id @default(autoincrement())
+  cohort      Int?
+  subject     Int?
+  weight      Float?
+  description String?   @db.VarChar(255)
+  subjects    subjects? @relation(fields: [subject], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "cohorts_subjects")
+
+  @@index([subject], map: "cohorts_subjects")
+}
+
+model cohorts {
+  id       Int        @id @default(autoincrement())
+  title    String?    @db.VarChar(100)
+  school   Int?
+  next     Int?
+  students students[]
+}
+
+model coupons {
+  id          Int       @id @default(autoincrement())
+  code        String?   @db.VarChar(50)
+  type        String?   @db.VarChar(50)
+  value       Decimal?  @db.Decimal(10, 2)
+  max_usage   Int?
+  start_date  DateTime? @db.DateTime(6)
+  expire_date DateTime? @db.DateTime(6)
+}
+
+model cqrs_breakdowns_overall {
+  id              String    @id @db.VarChar(30)
+  student         Int?
+  breakdown       Int?
+  breakdown_title String?   @db.VarChar(100)
+  overall         Decimal?  @db.Decimal(20, 3)
+  letter          String?   @db.VarChar(10)
+  gpa             Decimal?  @db.Decimal(10, 3)
+  last_update     DateTime? @db.DateTime(6)
+  branch          Int?
+  gradelevel      Int?
+  academic_year   Int?
+}
+
+model cqrs_overall {
+  id            String    @id @db.VarChar(30)
+  student       Int?
+  overall       Decimal?  @db.Decimal(20, 3)
+  letter        String?   @db.VarChar(10)
+  gpa           Decimal?  @db.Decimal(10, 3)
+  last_update   DateTime? @db.DateTime(6)
+  branch        Int?
+  branch_title  String?   @db.VarChar(100)
+  grade_level   Int?
+  academic_year Int?
+}
+
+model cqrs_subjects_breakdowns_overall {
+  id              String    @id @db.VarChar(30)
+  student         Int?
+  subject         Int?
+  breakdown       Int?
+  breakdown_title String?   @db.VarChar(100)
+  branch          Int?
+  branch_title    String?   @db.VarChar(100)
+  grade_level     Int?
+  classroom       Int?
+  subject_title   String?   @db.VarChar(255)
+  weight          Decimal?  @db.Decimal(10, 1)
+  overall         Decimal?  @db.Decimal(20, 3)
+  letter          String?   @db.VarChar(10)
+  gpa             Decimal?  @db.Decimal(10, 3)
+  last_update     DateTime? @db.DateTime(6)
+  academic_year   Int?
+  years           years?    @relation(fields: [academic_year], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "academic_year")
+
+  @@index([academic_year], map: "academic_year_idx")
+}
+
+model cqrs_subjects_overall {
+  id            String    @id @db.VarChar(30)
+  student       Int?
+  subject       Int?
+  subject_title String?   @db.VarChar(255)
+  branch        Int?
+  branch_title  String?   @db.VarChar(100)
+  grade_level   Int?
+  classroom     Int?
+  weight        Decimal?  @db.Decimal(10, 1)
+  overall       Decimal?  @db.Decimal(20, 3)
+  letter        String?   @db.VarChar(10)
+  gpa           Decimal?  @db.Decimal(10, 3)
+  last_update   DateTime? @db.DateTime(6)
+  academic_year Int?
+  branches      branches? @relation(fields: [branch], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "studentgrades_branch")
+  grades        grades?   @relation(fields: [grade_level], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "studentgrades_grade")
+  years         years?    @relation(fields: [academic_year], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "studentgrades_year")
+
+  @@index([branch], map: "studentgrades_branch")
+  @@index([grade_level], map: "studentgrades_grade")
+  @@index([academic_year], map: "studentgrades_year")
+}
+
+model cqrs_weights {
+  id            String    @id @db.VarChar(30)
+  student       Int?
+  subject       Int?
+  breakdown     Int?
+  weight_id     Int?
+  student_grade Decimal?  @db.Decimal(10, 3)
+  last_update   DateTime? @db.DateTime(6)
+}
+
+model crm_status {
+  id    Int     @id @default(autoincrement())
+  order Int?
+  title String? @db.VarChar(255)
+  type  String? @db.VarChar(255)
+}
+
+model customers {
+  id        Int     @id @default(autoincrement())
+  firstname String? @db.VarChar(100)
+  lastname  String? @db.VarChar(100)
+  email     String? @db.VarChar(100)
+  mobile    String? @db.VarChar(20)
+  facebook  String? @db.VarChar(100)
+  microsoft String? @db.VarChar(100)
+}
+
+model departments {
+  id        Int     @id @default(autoincrement())
+  provinces Int?
+  title     String? @db.VarChar(100)
+}
+
+model discipline {
+  id           Int     @id @default(autoincrement())
+  student      Int?
+  record_date  String? @db.VarChar(100)
+  record_time  String? @db.VarChar(100)
+  reason       String? @db.VarChar(255)
+  prior_action String? @db.VarChar(255)
+  admin_action String? @db.VarChar(255)
+  description  String? @db.VarChar(255)
+}
+
+model discounts {
+  student       Int
+  id            Int     @id @default(autoincrement())
+  fees_type     Int?
+  discount      Int?
+  discount_type Int?
+  parent        Int?
+  discreption   String? @db.VarChar(255)
+}
+
+model discounts_types {
+  id    Int     @id @default(autoincrement())
+  title String? @db.VarChar(100)
+}
+
+model documents {
+  id      Int     @id @default(autoincrement())
+  student Int?
+  title   String? @db.VarChar(255)
+  link    String? @db.VarChar(255)
+  editor  Int?
+}
+
+model employees {
+  id                                                                  Int                             @id @default(autoincrement())
+  firstname                                                           String?                         @db.VarChar(255)
+  lastname                                                            String?                         @db.VarChar(255)
+  domain                                                              Int?
+  nationality                                                         String?                         @db.VarChar(255)
+  national_id                                                         String?                         @db.VarChar(100)
+  joining_date                                                        String?                         @db.VarChar(100)
+  gender                                                              String?                         @db.VarChar(50)
+  job                                                                 Int?
+  school                                                              Int?
+  email                                                               String?                         @db.VarChar(255)
+  image                                                               String?                         @db.VarChar(255)
+  mobile                                                              String?                         @db.VarChar(20)
+  role_name                                                           String?                         @db.VarChar(50)
+  description                                                         String?                         @db.VarChar(100)
+  role                                                                Int?
+  password                                                            String?                         @db.VarChar(100)
+  token_version                                                       Int?                            @default(0)
+  jobs                                                                jobs?                           @relation(fields: [job], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "employee_jobs")
+  employees_branches                                                  employees_branches[]
+  employees_classrooms                                                employees_classrooms[]
+  employees_grades                                                    employees_grades[]
+  employees_points_employees_points_created_byToemployees             employees_points[]              @relation("employees_points_created_byToemployees")
+  employees_points_employees_points_employee_idToemployees            employees_points[]              @relation("employees_points_employee_idToemployees")
+  employees_stage_tags                                                employees_stage_tags[]
+  employees_stages                                                    employees_stages[]
+  employees_subjects                                                  employees_subjects[]
+  employees_targets                                                   employees_targets[]
+  flags                                                               flags[]
+  gamification_requests_gamification_requests_requested_byToemployees gamification_requests[]         @relation("gamification_requests_requested_byToemployees")
+  gamification_requests_gamification_requests_reviewed_byToemployees  gamification_requests[]         @relation("gamification_requests_reviewed_byToemployees")
+  lesson_plan                                                         lesson_plan[]
+  lesson_plan_activity_duration                                       lesson_plan_activity_duration[]
+  lesson_plan_classroom                                               lesson_plan_classroom[]
+  lesson_plan_details                                                 lesson_plan_details[]
+  lives                                                               lives[]
+  logs                                                                logs[]
+  messages                                                            messages[]
+  messages_grouping                                                   messages_grouping[]
+  plans                                                               plans[]
+  plans_reviews                                                       plans_reviews[]
+  remedials                                                           remedials[]
+  status_logs                                                         status_logs[]
+  students_behaviour_records                                          students_behaviour_records[]
+  subordinates_subordinates_subordinateToemployees                    subordinates[]                  @relation("subordinates_subordinateToemployees")
+  subordinates_subordinates_employeeToemployees                       subordinates[]                  @relation("subordinates_employeeToemployees")
+  teachers_questions_sections                                         teachers_questions_sections[]
+  teachers_submissions                                                teachers_submissions[]
+  timetables                                                          timetables[]
+
+  @@index([job], map: "employee_jobs")
+  @@index([id], map: "employees_id")
+}
+
+model employees_actions {
+  id               Int                @id @default(autoincrement())
+  title            String?            @db.VarChar(255)
+  points           Int?
+  description      String?            @db.VarChar(255)
+  employees_points employees_points[]
+}
+
+model employees_branches {
+  id        Int        @id @default(autoincrement())
+  employee  Int?
+  branch    Int?
+  role      String?    @db.VarChar(100)
+  branches  branches?  @relation(fields: [branch], references: [id], onDelete: Cascade, map: "fk_branch_id1")
+  employees employees? @relation(fields: [employee], references: [id], onDelete: Cascade, map: "fk_employee_id1")
+
+  @@index([branch], map: "fk_branch_id1_idx")
+  @@index([employee], map: "fk_employee_id1_idx")
+  @@index([employee], map: "fk_employee_id_idx")
+}
+
+model employees_classrooms {
+  id                 Int                 @id @default(autoincrement())
+  enrollment         Int?
+  classroom          Int?
+  employee_id        Int?
+  classrooms         classrooms?         @relation(fields: [classroom], references: [id], onDelete: Cascade, map: "employees_clssroom")
+  employees          employees?          @relation(fields: [employee_id], references: [id], onDelete: Cascade, map: "fk_employee_id_class")
+  employees_subjects employees_subjects? @relation(fields: [enrollment], references: [id], onDelete: Cascade, map: "subject_classes")
+
+  @@index([employee_id], map: "fk_employee_id_class_idx")
+  @@index([enrollment], map: "idx_employees_classrooms_enrollment")
+  @@index([classroom], map: "owners")
+  @@index([enrollment], map: "owners_emp")
+}
+
+model employees_grades {
+  id          Int        @id @default(autoincrement())
+  employee_id Int?
+  grade_id    Int?
+  employees   employees? @relation(fields: [employee_id], references: [id], onDelete: Cascade, map: "fk_employee_id_grade")
+  grades      grades?    @relation(fields: [grade_id], references: [id], onDelete: Cascade, map: "fk_grade_id_emp")
+
+  @@index([employee_id], map: "fk_employee_id_grade_idx")
+  @@index([grade_id], map: "fk_grade_id_emp_idx")
+}
+
+model employees_points {
+  id                                                Int                @id @default(autoincrement())
+  employee_id                                       Int?
+  action_id                                         Int?
+  points                                            Int?
+  action                                            String?            @db.VarChar(100)
+  action_date                                       DateTime?          @db.DateTime(0)
+  created_by                                        Int?
+  description                                       String?            @db.VarChar(255)
+  employees_actions                                 employees_actions? @relation(fields: [action_id], references: [id], onDelete: Cascade, map: "action_points")
+  employees_employees_points_created_byToemployees  employees?         @relation("employees_points_created_byToemployees", fields: [created_by], references: [id], onDelete: Cascade, map: "created_points")
+  employees_employees_points_employee_idToemployees employees?         @relation("employees_points_employee_idToemployees", fields: [employee_id], references: [id], onDelete: Cascade, map: "employee_points")
+
+  @@index([action_id], map: "action_points")
+  @@index([created_by], map: "created_points")
+  @@index([employee_id], map: "employee_points")
+}
+
+model employees_stage_tags {
+  id           Int         @id @default(autoincrement())
+  employee_id  Int?
+  stage_tag_id Int?
+  employees    employees?  @relation(fields: [employee_id], references: [id], onDelete: Cascade, map: "fk_employee_id2")
+  stage_tags   stage_tags? @relation(fields: [stage_tag_id], references: [id], onDelete: Cascade, map: "fk_stage_tag_id2")
+
+  @@index([employee_id], map: "fk_employee_id1_idx")
+  @@index([employee_id], map: "fk_employee_id2_idx")
+  @@index([stage_tag_id], map: "fk_stage_tag_id2_idx")
+}
+
+model employees_stages {
+  id          Int        @id @default(autoincrement())
+  employee_id Int?
+  stage_id    Int?
+  employees   employees? @relation(fields: [employee_id], references: [id], onDelete: Cascade, map: "fk_employee_id_stage")
+  stages      stages?    @relation(fields: [stage_id], references: [id], onDelete: Cascade, map: "fk_stage_id")
+
+  @@index([employee_id], map: "fk_stage_employee_id_idx")
+  @@index([stage_id], map: "fk_stage_id_idx")
+}
+
+model employees_subjects {
+  id                   Int                    @id @default(autoincrement())
+  employee             Int?
+  subject              Int?
+  classrooms           String?                @db.VarChar(255)
+  role                 Int?
+  role_name            String?                @db.VarChar(50)
+  employees_classrooms employees_classrooms[]
+  subjects             subjects?              @relation(fields: [subject], references: [id], onDelete: Cascade, map: "owners")
+  employees            employees?             @relation(fields: [employee], references: [id], onDelete: Cascade, map: "owners_emp")
+
+  @@index([employee], map: "idx_employees_subjects_employee")
+  @@index([subject], map: "idx_employees_subjects_subject")
+  @@index([subject], map: "owners")
+  @@index([employee], map: "owners_emp")
+}
+
+model employees_targets {
+  id          Int        @id @default(autoincrement())
+  employee_id Int?
+  target_id   Int?
+  value       Int?
+  employees   employees? @relation(fields: [employee_id], references: [id], onDelete: Cascade, map: "Fkey_employee_id")
+  targets     targets?   @relation(fields: [target_id], references: [id], onDelete: Cascade, map: "target_id")
+
+  @@index([employee_id], map: "Fkey_employee_id_idx")
+  @@index([employee_id], map: "fk_employee_id_idx")
+  @@index([target_id], map: "target_id_idx")
+}
+
+model endpoints {
+  id    Int     @id @default(autoincrement())
+  title String? @db.VarChar(100)
+}
+
+model enrollment_years {
+  id    Int      @id @default(autoincrement())
+  title String?  @db.VarChar(100)
+  open  Boolean?
+}
+
+model enrollments {
+  id              Int       @id @default(autoincrement())
+  student         Int?
+  subject         Int?
+  teacher         Int?
+  code            String?   @db.VarChar(50)
+  enrollment_date DateTime? @db.DateTime(0)
+  points          Int?
+  active          Boolean?
+  balance         Int?
+  group           Int?
+  comments        String?   @db.VarChar(500)
+  subjects        subjects? @relation(fields: [subject], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "subject")
+  teachers        teachers? @relation(fields: [teacher], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "teacher_id")
+
+  @@index([subject], map: "subject")
+  @@index([teacher], map: "teacher_id")
+}
+
+model evaluations {
+  id                  Int                   @id @default(autoincrement())
+  title               String?               @db.VarChar(255)
+  subject_id          Int?
+  created_by          Int?
+  created_date        DateTime?             @db.DateTime(6)
+  hide                Boolean?
+  students_evaluation students_evaluation[]
+}
+
+model events_logs {
+  id         Int     @id @default(autoincrement())
+  student    Int?
+  type       String? @db.VarChar(100)
+  comment    String? @db.VarChar(255)
+  event_date String? @db.VarChar(100)
+  editor     Int?
+}
+
+model exams {
+  id           Int     @id @default(autoincrement())
+  title        String? @db.VarChar(255)
+  exam_date    String? @db.VarChar(255)
+  exam_time    String? @db.VarChar(255)
+  subject      Int?
+  lesson       Int?
+  weight       Int?
+  duration     Int?
+  descriptions String? @db.VarChar(255)
+}
+
+model exams_batches {
+  id          Int       @id @default(autoincrement())
+  title       String?   @db.VarChar(100)
+  create_date DateTime? @db.DateTime(6)
+  start_date  DateTime? @db.DateTime(6)
+  end_date    DateTime? @db.DateTime(6)
+  creator     Int?
+  description String?   @db.VarChar(255)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model exit_learning_activities {
+  branch_id                 Int     @default(0)
+  school                    String? @db.VarChar(255)
+  location                  String? @db.VarChar(255)
+  avg_exit_grade_percentage Float   @default(0)
+
+  @@ignore
+}
+
+model fees {
+  id             Int          @id @default(autoincrement())
+  student        Int?
+  due_date       String?      @db.VarChar(255)
+  fees_type      Int?
+  amount         Decimal?     @db.Decimal(10, 2)
+  discount       Decimal?     @db.Decimal(10, 2)
+  discount_type  Int?
+  total          Decimal?     @db.Decimal(10, 2)
+  academic_year  Int?
+  subject        Int?
+  subject_status String?      @db.VarChar(100)
+  exam_round     String?      @db.VarChar(100)
+  description    String?      @db.VarChar(255)
+  editor         Int?
+  editing_date   DateTime?    @db.DateTime(6)
+  school_fee     Int?
+  students       students?    @relation(fields: [student], references: [id], onDelete: Cascade, map: "fees")
+  school_fees    school_fees? @relation(fields: [school_fee], references: [id], onDelete: Cascade, map: "school_fee")
+  ig_subjects    ig_subjects? @relation(fields: [subject], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "subjects")
+  fees_types     fees_types?  @relation(fields: [fees_type], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "types")
+
+  @@index([student], map: "fees")
+  @@index([fees_type], map: "fees_type")
+  @@index([school_fee], map: "school_fee_idx")
+  @@index([subject], map: "subjects")
+}
+
+model fees_admission {
+  id             Int          @id @default(autoincrement())
+  student        Int?
+  due_date       String?      @db.VarChar(255)
+  fees_type      Int?
+  amount         Decimal?     @db.Decimal(10, 2)
+  discount       Decimal?     @db.Decimal(10, 2)
+  discount_type  Int?
+  total          Decimal?     @db.Decimal(10, 2)
+  academic_year  Int?
+  subject        Int?
+  subject_status String?      @db.VarChar(100)
+  exam_round     String?      @db.VarChar(100)
+  description    String?      @db.VarChar(255)
+  editor         Int?
+  editing_date   DateTime?    @db.DateTime(6)
+  candidates     candidates?  @relation(fields: [student], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "admission_fees")
+  fees_types     fees_types?  @relation(fields: [fees_type], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fees_ types")
+  ig_subjects    ig_subjects? @relation(fields: [subject], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fees_subjects")
+
+  @@index([student], map: "fees")
+  @@index([subject], map: "fees_subjects")
+  @@index([fees_type], map: "fees_type")
+}
+
+model fees_types {
+  id             Int              @id @default(autoincrement())
+  title          String?          @db.VarChar(100)
+  fees           fees[]
+  fees_admission fees_admission[]
+}
+
+model flags {
+  id          Int        @id @default(autoincrement())
+  owner       Int?
+  subject     Int?
+  lesson      Int?
+  type        String?    @db.VarChar(100)
+  item_id     Int?
+  reason      String?    @db.VarChar(255)
+  description String?    @db.VarChar(500)
+  flag_date   DateTime?  @db.DateTime(6)
+  status      String?    @db.VarChar(100)
+  editor      Int?
+  last_edit   DateTime?  @db.DateTime(6)
+  lessons     lessons?   @relation(fields: [lesson], references: [id], onDelete: Cascade, map: "flag_lesson")
+  employees   employees? @relation(fields: [owner], references: [id], onDelete: Cascade, map: "flag_owner")
+  subjects    subjects?  @relation(fields: [subject], references: [id], onDelete: Cascade, map: "flag_subject")
+
+  @@index([lesson], map: "flag_lesson")
+  @@index([owner], map: "flag_owner")
+  @@index([subject], map: "flag_subject")
+}
+
+model grades {
+  id                                                      Int                     @id @default(autoincrement())
+  title                                                   String?                 @db.VarChar(255)
+  admission                                               Boolean?
+  branch_id                                               Int?
+  next                                                    Int?
+  overall                                                 Boolean?
+  gpa                                                     Boolean?
+  stage                                                   Int?
+  waiting_list                                            Boolean?                @default(false)
+  system_grade_id                                         Int?
+  ai_assistants                                           ai_assistants?
+  announcement_grade                                      announcement_grade[]
+  candidates                                              candidates[]
+  chats                                                   chats[]
+  chats_grouping                                          chats_grouping[]
+  classrooms                                              classrooms[]
+  cqrs_subjects_overall                                   cqrs_subjects_overall[]
+  employees_grades                                        employees_grades[]
+  gamification_requests                                   gamification_requests[]
+  stages                                                  stages?                 @relation(fields: [stage], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "branch_stage")
+  branches                                                branches?               @relation(fields: [branch_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "branches_list")
+  system_grades                                           system_grades?          @relation(fields: [system_grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_grades_system_grade_id")
+  grades_scales                                           grades_scales[]
+  hr_candidates                                           hr_candidates[]
+  prices                                                  prices[]
+  school_fees                                             school_fees[]
+  students                                                students[]
+  students_transfers_students_transfers_new_gradeTogrades students_transfers[]    @relation("students_transfers_new_gradeTogrades")
+  students_transfers_students_transfers_gradeTogrades     students_transfers[]    @relation("students_transfers_gradeTogrades")
+  subjects                                                subjects[]
+
+  @@index([stage], map: "branch_stage")
+  @@index([id], map: "grade_id")
+  @@index([branch_id], map: "grades_branch_id_fkey")
+  @@index([system_grade_id], map: "fk_grades_system_grade_id_idx")
+  @@fulltext([title], map: "grade_title")
+}
+
+model grades_scales {
+  id          Int      @id @default(autoincrement())
+  grade_level Int?
+  title       String?  @db.VarChar(100)
+  grade       Decimal? @db.Decimal(10, 2)
+  gpa         Decimal? @db.Decimal(10, 2)
+  grades      grades?  @relation(fields: [grade_level], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "grade_scales")
+
+  @@index([grade_level], map: "grade_scales")
+}
+
+model groups {
+  id    Int     @id @default(autoincrement())
+  title String? @db.VarChar(100)
+  type  String? @db.VarChar(100)
+}
+
+model houses {
+  id    Int     @id @default(autoincrement())
+  title String? @db.VarChar(100)
+}
+
+model hr_candidates {
+  id               Int               @id @default(autoincrement())
+  firstname        String?           @db.VarChar(255)
+  lastname         String?           @db.VarChar(255)
+  email            String?           @db.VarChar(255)
+  mobile           String?           @db.VarChar(50)
+  gender           String?           @db.VarChar(100)
+  address          String?           @db.VarChar(400)
+  job_id           Int?
+  branch_id        Int?
+  grade_id         Int?
+  subject_id       Int?
+  experience       Int?
+  degree           String?           @db.VarChar(500)
+  cv_url           String?           @db.VarChar(500)
+  status           Int?
+  created_at       DateTime?         @db.DateTime(6)
+  candidates_logs  candidates_logs[]
+  grades           grades?           @relation(fields: [grade_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "cand_grade")
+  jobs             jobs?             @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cand_job")
+  branches         branches?         @relation(fields: [branch_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "cand_school")
+  candidate_status candidate_status? @relation(fields: [status], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "cand_status")
+  subjects         subjects?         @relation(fields: [subject_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "cand_subject")
+
+  @@index([grade_id], map: "cand_grade")
+  @@index([job_id], map: "cand_job")
+  @@index([branch_id], map: "cand_school")
+  @@index([status], map: "cand_status")
+  @@index([subject_id], map: "cand_subject")
+}
+
+model hr_questions {
+  id           Int       @id @default(autoincrement())
+  job          Int?
+  title        String?   @db.Text
+  type         String?   @db.VarChar(255)
+  difficulty   Int?
+  dok          String?   @db.VarChar(50)
+  bloom        String?   @db.VarChar(50)
+  answer       String?   @db.VarChar(255)
+  standard     Int?
+  owner        Int?
+  duration     Int?
+  review       String?   @db.VarChar(255)
+  reviewer     Int?
+  review_time  String?   @db.VarChar(100)
+  editing_date DateTime? @db.DateTime(6)
+  weight       Float?    @db.Float
+  editor       Int?
+
+  @@index([job], map: "lesson_questions")
+}
+
+model hr_questions_details {
+  id           Int        @id @default(autoincrement())
+  question     Int?
+  body         String?    @db.Text
+  image        String?    @db.VarChar(255)
+  video        String?    @db.VarChar(255)
+  sound        String?    @db.VarChar(255)
+  link         String?    @db.VarChar(255)
+  feedback     String?    @db.Text
+  answer_image String?    @db.VarChar(255)
+  answer_video String?    @db.VarChar(255)
+  answer_sound String?    @db.VarChar(255)
+  answer_link  String?    @db.VarChar(255)
+  questions    questions? @relation(fields: [question], references: [id], onDelete: Cascade, map: "hr_questions_details_ibfk_1")
+
+  @@index([question], map: "question_details")
+}
+
+model hr_questions_options {
+  id        Int        @id @default(autoincrement())
+  question  Int?
+  title     String?    @db.VarChar(255)
+  sound     String?    @db.VarChar(255)
+  correct   Boolean?
+  order     Int?
+  points    Int?
+  questions questions? @relation(fields: [question], references: [id], onDelete: Cascade, map: "hr_questions_options_ibfk_1")
+
+  @@index([question], map: "options")
+}
+
+model hr_requests {
+  id       Int     @id @default(autoincrement())
+  employee Int?
+  type     String? @db.VarChar(100)
+  status   String? @db.VarChar(100)
+}
+
+model ig_subjects {
+  id                 Int                  @id @default(autoincrement())
+  title              String?              @db.VarChar(100)
+  fees               fees[]
+  fees_admission     fees_admission[]
+  payments           payments[]
+  payments_admission payments_admission[]
+}
+
+model jobs {
+  id            Int             @id @default(autoincrement())
+  title         String?         @db.VarChar(255)
+  recruitment   Boolean?
+  academic      Boolean?
+  attach        String?         @db.VarChar(255)
+  description   String?         @db.VarChar(500)
+  employees     employees[]
+  hr_candidates hr_candidates[]
+}
+
+model leads {
+  id              Int       @id @default(autoincrement())
+  student_name    String?   @db.VarChar(255)
+  application_for String?   @db.VarChar(255)
+  current_school  String?   @db.VarChar(255)
+  nationality     String?   @db.VarChar(100)
+  country         String?   @db.VarChar(100)
+  parent_name     String?   @db.VarChar(255)
+  parent_email    String?   @db.VarChar(255)
+  parent_whatsapp String?   @db.VarChar(100)
+  started_date    DateTime? @db.DateTime(0)
+  end_date        DateTime? @db.DateTime(0)
+  grade_level     String?   @db.VarChar(100)
+  score           Float?    @db.Float
+  right_answers   Int?
+  wrong_answers   Int?
+  missed_answers  Int?
+}
+
+model lesson_resources {
+  id                           Int                            @id @default(autoincrement())
+  title                        String?                        @db.VarChar(255)
+  type                         String?                        @db.VarChar(100)
+  lesson                       Int?
+  link                         String?                        @db.VarChar(255)
+  order                        Int?
+  hide                         Boolean?
+  description                  String?                        @db.Text
+  classroom_id                 Int?
+  is_interactive               Int?                           @default(0) @db.TinyInt
+  bunny_library_id             String?                        @db.VarChar(50)
+  bunny_video_id               String?                        @db.VarChar(100)
+  firebase_link                String?                        @db.VarChar(255)
+  bunny_collection_id          String?                        @db.VarChar(255)
+  video_time                   Int?
+  assignments                  assignments[]
+  lesson_plan_details          lesson_plan_details[]
+  lesson_resource_sections     lesson_resource_sections[]
+  classrooms                   classrooms?                    @relation(fields: [classroom_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_resources_classroom_id")
+  lessons                      lessons?                       @relation(fields: [lesson], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_lesson_resources_lesson_id")
+  lesson_resources_submissions lesson_resources_submissions[]
+
+  @@index([lesson], map: "fk_lesson_resources_lesson_id_idx")
+  @@index([classroom_id], map: "fk_lesson_resources_classroom_id_idx")
+}
+
+model lessons {
+  id                       Int                        @id @default(autoincrement())
+  title                    String?                    @db.VarChar(255)
+  subject                  Int?
+  order                    Int?
+  hide                     Boolean?
+  freezed                  Boolean?
+  current                  Boolean?
+  summer                   Boolean?
+  orientation              Boolean?
+  type                     String?                    @db.VarChar(100)
+  image                    String?                    @db.VarChar(255)
+  lesson_date              String?                    @db.VarChar(100)
+  breakdown                Int?
+  description              String?                    @db.VarChar(200)
+  is_locked                Boolean?                   @default(false)
+  assignment_random        assignment_random[]
+  assignments              assignments[]
+  flags                    flags[]
+  lesson_plan              lesson_plan[]
+  lesson_resources         lesson_resources[]
+  breakdowns               breakdowns?                @relation(fields: [breakdown], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "breakdown_lesson")
+  subjects                 subjects?                  @relation(fields: [subject], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "subjects_lessons")
+  plans                    plans[]
+  practices                practices[]
+  questions                questions[]
+  students_lessons_reports students_lessons_reports[]
+
+  @@index([breakdown], map: "breakdown_lesson")
+  @@index([id], map: "lesson_id")
+  @@index([subject], map: "subjects_lessons")
+  @@index([subject, lesson_date], map: "idx_lessons_subject_date")
+}
+
+model lessons_details {
+  id          Int     @id
+  lesson      Int
+  objectives  String? @db.Text
+  weekly_plan String? @db.VarChar(255)
+  attachment  String? @db.VarChar(255)
+  image       String? @db.VarChar(255)
+}
+
+model lives {
+  id           Int         @id @default(autoincrement())
+  title        String?     @db.VarChar(255)
+  link         String?     @db.VarChar(255)
+  recorded     String?     @db.VarChar(255)
+  live_date    String?     @db.VarChar(255)
+  live_time    String?     @db.VarChar(255)
+  live_end     String?     @db.VarChar(255)
+  subject      Int?
+  lesson       Int?
+  classroom    Int?
+  session      String?     @db.VarChar(100)
+  created_by   Int?
+  created_date DateTime?   @db.DateTime(6)
+  descriptions String?     @db.VarChar(255)
+  classrooms   classrooms? @relation(fields: [classroom], references: [id], onDelete: Cascade, map: "live_classrooms")
+  employees    employees?  @relation(fields: [created_by], references: [id], onDelete: Cascade, map: "lives_employee")
+  subjects     subjects?   @relation(fields: [subject], references: [id], onDelete: Cascade, map: "lives_subjects")
+
+  @@index([classroom], map: "live_classrooms")
+  @@index([created_by], map: "lives_employee")
+  @@index([subject], map: "lives_subjects")
+}
+
+model logs {
+  id          Int        @id @default(autoincrement())
+  owner       Int?
+  role        String?    @db.VarChar(100)
+  endpoint    String?    @db.VarChar(255)
+  item_id     Int?
+  type        String?    @db.VarChar(255)
+  action      String?    @db.VarChar(100)
+  host        String?    @db.VarChar(255)
+  subject     Int?
+  lesson      Int?
+  title       String?    @db.VarChar(255)
+  action_date DateTime?  @db.DateTime(6)
+  employees   employees? @relation(fields: [owner], references: [id], onDelete: Cascade, map: "log_emp")
+  subjects    subjects?  @relation(fields: [subject], references: [id], onDelete: Cascade, map: "log_subject")
+
+  @@index([owner], map: "log_emp")
+  @@index([subject], map: "log_subject")
+}
+
+model mat_weights {
+  id                 Int     @id @default(autoincrement())
+  student_id         Int?
+  subject_id         Int?
+  weight_id          Int?
+  weight_title       String? @db.VarChar(255)
+  weight_weight      Int?
+  assignments_grade  Int?
+  student_grade      Float?
+  overall_percentage Float?
+  weight_percentage  Float?
+}
+
+model messages {
+  id                Int                 @id @default(autoincrement())
+  chat              Int?
+  sender            Int?
+  message           String?             @db.Text
+  attachment        String?             @db.VarChar(255)
+  created_at        DateTime?           @db.Timestamp(0)
+  employee_id       Int?
+  parent_message_id Int?
+  read_at           DateTime?           @db.Timestamp(0)
+  reciver_id        Int?
+  sender_type       String?             @db.VarChar(100)
+  student_id        Int?
+  user_ip           String?             @db.VarChar(255)
+  chats             chats?              @relation(fields: [chat], references: [id], onDelete: Cascade, map: "chat_id")
+  employees         employees?          @relation(fields: [employee_id], references: [id], onDelete: Cascade, map: "employee_id")
+  messages          messages?           @relation("messagesTomessages", fields: [parent_message_id], references: [id], onDelete: Cascade, map: "message_id")
+  other_messages    messages[]          @relation("messagesTomessages")
+  students          students?           @relation(fields: [student_id], references: [id], onDelete: Cascade, map: "student_id")
+  messages_grouping messages_grouping[]
+
+  @@index([chat], map: "chat_id_idx")
+  @@index([employee_id], map: "employee_id_idx")
+  @@index([parent_message_id], map: "message_id_idx")
+  @@index([reciver_id], map: "reciver_id")
+  @@index([sender], map: "sender")
+  @@index([student_id], map: "student_id_idx")
+}
+
+model messages_grouping {
+  id          Int        @id @default(autoincrement())
+  message_id  Int?
+  sender_id   Int?
+  message     String?    @db.Text
+  sender_type String?    @db.VarChar(45)
+  attachment  String?    @db.VarChar(45)
+  created_at  DateTime?  @db.Timestamp(0)
+  read_at     DateTime?  @db.Timestamp(0)
+  student_id  Int?
+  employee_id Int?
+  reciver_id  Int?
+  chat        Int?
+  chats       chats?     @relation(fields: [chat], references: [id], onDelete: Cascade, map: "Fk_chat_id")
+  employees   employees? @relation(fields: [employee_id], references: [id], onDelete: Cascade, map: "Fk_employee_id")
+  messages    messages?  @relation(fields: [message_id], references: [id], onDelete: Cascade, map: "Fk_message_id")
+  students    students?  @relation(fields: [student_id], references: [id], onDelete: Cascade, map: "Fk_student_id")
+
+  @@index([chat], map: "Fk_chat_id_idx")
+  @@index([employee_id], map: "Fk_employee_id_idx")
+  @@index([message_id], map: "Fk_message_id_idx")
+  @@index([student_id], map: "Fk_student_id_idx")
+  @@index([read_at], map: "read_at")
+  @@index([reciver_id], map: "reciver_id")
+}
+
+model modules {
+  id        Int     @id @default(autoincrement())
+  title     String? @db.VarChar(100)
+  end_point String? @db.VarChar(100)
+}
+
+model notifications {
+  id                     Int                      @id @default(autoincrement())
+  title                  String?                  @db.VarChar(250)
+  body                   String?                  @db.VarChar(250)
+  data                   Json?
+  created_at             DateTime?                @default(now()) @db.Timestamp(0)
+  parents_notifications  parents_notifications[]
+  students_notifications students_notifications[]
+}
+
+model offer_views {
+  id         Int      @id @default(autoincrement())
+  offer_id   Int
+  student_id Int
+  offers     offers   @relation(fields: [offer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_offers_id")
+  students   students @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_students_id")
+
+  @@index([offer_id], map: "offer_id_idx")
+  @@index([student_id], map: "students_id_idx")
+}
+
+model offers {
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @db.VarChar(100)
+  description          String?                @db.VarChar(255)
+  expire_date          DateTime?              @db.DateTime(6)
+  created_at           DateTime?              @db.DateTime(6)
+  percentage           Int
+  all                  Int                    @default(1) @db.TinyInt
+  vendor_id            Int
+  active               Int?                   @default(1) @db.TinyInt
+  views                Int?                   @default(0)
+  image                String?                @db.VarChar(300)
+  offer_views          offer_views[]
+  vendors              vendors                @relation(fields: [vendor_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "vendor_id")
+  vendor_branch_offers vendor_branch_offers[]
+  vendor_offer_codes   vendor_offer_codes[]
+
+  @@index([vendor_id], map: "vendor_id_idx")
+}
+
+model orders {
+  id         Int       @id @default(autoincrement())
+  customer   Int?
+  order_date DateTime? @db.DateTime(6)
+  paid_date  DateTime? @db.DateTime(6)
+  coupon     Int?
+  num_items  Int?
+  net_total  Decimal?  @db.Decimal(10, 2)
+  status     String?   @db.VarChar(100)
+}
+
+model overall {
+  id      Int    @id @default(autoincrement())
+  student Int?
+  subject Int?
+  weight  Int?
+  overall Float? @db.Float
+}
+
+model parent_jobs {
+  id    Int     @id @default(autoincrement())
+  title String? @db.VarChar(100)
+}
+
+model parents {
+  id                                                                 Int                       @id @default(autoincrement())
+  name                                                               String?                   @db.VarChar(255)
+  mobile                                                             String?                   @db.VarChar(100)
+  email                                                              String?                   @db.VarChar(100)
+  degree                                                             String?                   @db.VarChar(300)
+  company                                                            String?                   @db.VarChar(100)
+  occupation                                                         String?                   @db.VarChar(300)
+  national_id                                                        String?                   @db.VarChar(50)
+  type                                                               parents_type
+  first_name                                                         String?                   @db.VarChar(100)
+  last_name                                                          String?                   @db.VarChar(100)
+  password                                                           String?                   @db.VarChar(45)
+  klickit_flag                                                       Int?                      @default(0) @db.TinyInt
+  token_version                                                      Int?                      @default(0)
+  ai_chats                                                           ai_chats?
+  devices                                                            devices[]
+  parents_notifications                                              parents_notifications[]
+  parents_students                                                   parents_students[]
+  students_weekly_reports_students_weekly_reports_father_idToparents students_weekly_reports[] @relation("students_weekly_reports_father_idToparents")
+  students_weekly_reports_students_weekly_reports_mother_idToparents students_weekly_reports[] @relation("students_weekly_reports_mother_idToparents")
+}
+
+model participations {
+  id       Int      @id @default(autoincrement())
+  student  Int?
+  lesson   Int?
+  subject  Int?
+  grade    Decimal? @db.Decimal(10, 2)
+  feedback String?  @db.VarChar(255)
+}
+
+model payment_types {
+  id                 Int                  @id @default(autoincrement())
+  title              String?              @db.VarChar(100)
+  payments           payments[]
+  payments_admission payments_admission[]
+}
+
+model payments {
+  id             Int            @id @default(autoincrement())
+  student        Int?
+  payment_date   String?        @db.VarChar(255)
+  payment_type   Int?
+  payment_way    Int?
+  amount         Decimal?       @db.Decimal(10, 2)
+  discount       Decimal?       @db.Decimal(10, 2)
+  total          Decimal?       @db.Decimal(10, 2)
+  payment_by     Int?
+  academic_year  Int?
+  subject        Int?
+  subject_status String?        @db.VarChar(100)
+  exam_round     String?        @db.VarChar(100)
+  description    String?        @db.VarChar(255)
+  editor         Int?
+  editing_date   DateTime?      @db.DateTime(6)
+  ig_subjects    ig_subjects?   @relation(fields: [subject], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "igsubjects")
+  students       students?      @relation(fields: [student], references: [id], onDelete: Cascade, map: "payments")
+  payment_types  payment_types? @relation(fields: [payment_type], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "type")
+
+  @@index([subject], map: "igsubjects")
+  @@index([student], map: "payments")
+  @@index([payment_type], map: "type")
+}
+
+model payments_admission {
+  id             Int            @id @default(autoincrement())
+  student        Int?
+  payment_date   String?        @db.VarChar(255)
+  payment_type   Int?
+  payment_way    Int?
+  amount         Decimal?       @db.Decimal(10, 2)
+  discount       Decimal?       @db.Decimal(10, 2)
+  total          Decimal?       @db.Decimal(10, 2)
+  payment_by     Int?
+  academic_year  Int?
+  subject        Int?
+  subject_status String?        @db.VarChar(100)
+  exam_round     String?        @db.VarChar(100)
+  description    String?        @db.VarChar(255)
+  editor         Int?
+  editing_date   DateTime?      @db.DateTime(6)
+  candidates     candidates?    @relation(fields: [student], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "admission_payments")
+  ig_subjects    ig_subjects?   @relation(fields: [subject], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "payments_subjects")
+  payment_types  payment_types? @relation(fields: [payment_type], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "payments_types")
+
+  @@index([student], map: "payments")
+  @@index([subject], map: "payments_subjects")
+  @@index([payment_type], map: "type")
+}
+
+model pending_payments {
+  id            Int       @id @default(autoincrement())
+  total         Decimal?  @db.Decimal(10, 2)
+  branch        Int?
+  payment_date  String?   @db.VarChar(100)
+  ref           String?   @db.VarChar(100)
+  academic_year Int?
+  bank          Int?
+  editor        Int?
+  editing_date  DateTime? @db.DateTime(6)
+  description   String?   @db.VarChar(255)
+  banks         banks?    @relation(fields: [bank], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "pending_bank")
+  branches      branches? @relation(fields: [branch], references: [id], onDelete: Cascade, map: "pending_branch")
+  years         years?    @relation(fields: [academic_year], references: [id], onDelete: Cascade, map: "pending_year")
+
+  @@index([bank], map: "pending_bank")
+  @@index([branch], map: "pending_branch")
+  @@index([academic_year], map: "pending_year")
+}
+
+model practices {
+  id            Int        @id @default(autoincrement())
+  student       Int?
+  question      Int?
+  answer        String?    @db.VarChar(100)
+  ref           Int?
+  answer_date   DateTime?  @db.DateTime(6)
+  subject       Int?
+  lesson        Int?
+  answer_status String?    @db.VarChar(45)
+  correct       Boolean?   @default(false)
+  lessons       lessons?   @relation(fields: [lesson], references: [id], onDelete: Cascade, map: "practic_lessons_id_fk")
+  subjects      subjects?  @relation(fields: [subject], references: [id], onDelete: Cascade, map: "practic_subjects_id_fk")
+  questions     questions? @relation(fields: [question], references: [id], onDelete: Cascade, map: "practice_questions_id_fk")
+  students      students?  @relation(fields: [student], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "practice_student_id_fk")
+
+  @@index([lesson], map: "practic_lessons_id_fk_idx")
+  @@index([subject], map: "practic_subjects_id_fk_idx")
+  @@index([question], map: "practice_questions_id_fk_idx")
+  @@index([student], map: "practice_student_id_fk_idx")
+  @@index([student, question], map: "practices_student_IDX")
+  @@index([student, question, correct], map: "practices_students_IDX")
+}
+
+model prices {
+  id                                  Int      @id @default(autoincrement())
+  enrollment_year                     Int?
+  grade                               Int?
+  fees                                Decimal? @db.Decimal(10, 2)
+  academic_year                       Int?
+  years_prices_academic_yearToyears   years?   @relation("prices_academic_yearToyears", fields: [academic_year], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "academicYear")
+  years_prices_enrollment_yearToyears years?   @relation("prices_enrollment_yearToyears", fields: [enrollment_year], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "enrollmentYear")
+  grades                              grades?  @relation(fields: [grade], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "grade")
+
+  @@index([academic_year], map: "academicYear")
+  @@index([enrollment_year], map: "enrollmentYear")
+  @@index([grade], map: "grade")
+}
+
+model products {
+  id             Int       @id @default(autoincrement())
+  category       Int?
+  form           Int?
+  title          String?   @db.VarChar(255)
+  image          String?   @db.VarChar(255)
+  video          String?   @db.VarChar(255)
+  currancy       String?   @db.VarChar(20)
+  price          Decimal?  @db.Decimal(10, 2)
+  sale_price     Decimal?  @db.Decimal(10, 2)
+  sale_from      DateTime? @db.Date
+  sale_to        DateTime? @db.Date
+  in_stock       Boolean?
+  is_published   Boolean?
+  published_date DateTime? @db.DateTime(6)
+  last_update    DateTime? @db.DateTime(6)
+  virtual        Boolean?
+  tags           String?   @db.VarChar(100)
+  description    String?   @db.VarChar(500)
+}
+
+model provinces {
+  id    Int     @id @default(autoincrement())
+  title String? @db.VarChar(100)
+}
+
+model questions {
+  id                         Int                          @id @default(autoincrement())
+  lesson                     Int?
+  title                      String?                      @db.Text
+  type                       String?                      @db.VarChar(255)
+  hide                       Boolean?
+  difficulty                 Int?
+  dok                        String?                      @db.VarChar(50)
+  bloom                      String?                      @db.VarChar(50)
+  answer                     String?                      @db.VarChar(255)
+  standard                   Int?
+  subject                    Int?
+  owner                      Int?
+  duration                   Int?
+  tag                        Int?
+  review                     String?                      @db.VarChar(255)
+  reviewer                   Int?
+  review_time                String?                      @db.VarChar(100)
+  editing_date               DateTime?                    @db.DateTime(6)
+  editor                     Int?
+  weight                     Int?
+  answers                    answers[]
+  hr_questions_details       hr_questions_details[]
+  hr_questions_options       hr_questions_options[]
+  practices                  practices[]
+  question_subject_standards question_subject_standards[]
+  lessons                    lessons?                     @relation(fields: [lesson], references: [id], onDelete: Cascade, map: "lesson_questions")
+  tags                       tags?                        @relation(fields: [tag], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "tags_questions")
+  questions_details          questions_details[]
+  questions_options          questions_options[]
+  sections_questions         sections_questions[]
+  submissions_details        submissions_details[]
+
+  @@index([lesson], map: "lesson_questions")
+  @@index([tag], map: "tags_questions")
+}
+
+model questions_details {
+  id           Int        @id @default(autoincrement())
+  question     Int?
+  body         String?    @db.VarChar(5000)
+  image        String?    @db.VarChar(255)
+  video        String?    @db.VarChar(255)
+  sound        String?    @db.VarChar(255)
+  link         String?    @db.VarChar(255)
+  feedback     String?    @db.VarChar(5000)
+  answer_image String?    @db.VarChar(255)
+  answer_video String?    @db.VarChar(255)
+  answer_sound String?    @db.VarChar(255)
+  answer_link  String?    @db.VarChar(255)
+  questions    questions? @relation(fields: [question], references: [id], onDelete: Cascade, map: "question_details")
+
+  @@index([question], map: "question_details")
+}
+
+model questions_options {
+  id        Int        @id @default(autoincrement())
+  question  Int?
+  title     String?    @db.VarChar(255)
+  sound     String?    @db.VarChar(255)
+  correct   Boolean?
+  questions questions? @relation(fields: [question], references: [id], onDelete: Cascade, map: "options")
+
+  @@index([question], map: "options")
+}
+
+model reels {
+  id          Int      @id
+  title       String?  @db.VarChar(45)
+  image       String?  @db.VarChar(45)
+  video       String?  @db.VarChar(45)
+  like        String?  @db.VarChar(45)
+  comment     String?  @db.VarChar(45)
+  issued_date String?  @db.VarChar(45)
+  expiry_date String?  @db.VarChar(45)
+  active      String?  @db.VarChar(45)
+  old_reels   String?  @db.VarChar(45)
+  teachers_id Int
+  teachers    teachers @relation(fields: [teachers_id], references: [id], onUpdate: Restrict, map: "fk_reels_teachers1")
+
+  @@index([teachers_id], map: "fk_reels_teachers1_idx")
+}
+
+model remedials {
+  id            Int        @id @default(autoincrement())
+  title         String?    @db.VarChar(255)
+  subject       Int?
+  teacher       Int?
+  weight        Int?
+  grade_from    Float?
+  grade_to      Float?
+  room          Int?
+  remedial_day  String?    @db.VarChar(100)
+  remedial_time DateTime?  @db.DateTime(6)
+  created_by    Int?
+  created_date  DateTime?  @db.DateTime(6)
+  description   String?    @db.VarChar(255)
+  employees     employees? @relation(fields: [teacher], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "remedial_emp")
+  rooms         rooms?     @relation(fields: [room], references: [id], onDelete: Cascade, map: "remedial_room")
+  subjects      subjects?  @relation(fields: [subject], references: [id], onDelete: Cascade, map: "remedial_subject")
+  weights       weights?   @relation(fields: [weight], references: [id], onDelete: Cascade, map: "remedial_weight")
+
+  @@index([teacher], map: "remedial_emp")
+  @@index([room], map: "remedial_room")
+  @@index([subject], map: "remedial_subject")
+  @@index([weight], map: "remedial_weight")
+}
+
+model report_questions {
+  id      Int     @id @default(autoincrement())
+  title   String? @db.VarChar(255)
+  type    String? @db.VarChar(100)
+  options String? @db.VarChar(500)
+}
+
+model request_forms {
+  id           Int     @id @default(autoincrement())
+  request_type Int?
+  title        String? @db.VarChar(255)
+  order        Int?
+  type         String? @db.VarChar(255)
+}
+
+model request_types {
+  id       Int        @id @default(autoincrement())
+  title    String?    @db.VarChar(255)
+  requests requests[]
+}
+
+model requests {
+  id             Int                      @id @default(autoincrement())
+  email          String?                  @db.VarChar(255)
+  grade          Int?
+  type           Int?
+  created_at     DateTime?                @db.DateTime(6)
+  status         Int?
+  student        Int?
+  description    String?                  @db.VarChar(4000)
+  feedback       String?                  @db.VarChar(500)
+  is_read        Int?                     @default(0) @db.TinyInt
+  request_status requests_request_status? @default(pending)
+  attachment     String?                  @db.VarChar(255)
+  students       students?                @relation(fields: [student], references: [id], onDelete: Cascade, map: "request_student")
+  request_types  request_types?           @relation(fields: [type], references: [id], onDelete: Cascade, map: "request_type")
+
+  @@index([student], map: "request_student")
+  @@index([type], map: "request_type")
+}
+
+model resources {
+  id                  Int      @id @default(autoincrement())
+  title               String?  @db.VarChar(255)
+  type                String?  @db.VarChar(100)
+  subject             Int?
+  link                String?  @db.VarChar(255)
+  order               Int?
+  hide                Boolean?
+  description         String?  @db.VarChar(255)
+  bunny_library_id    String?  @db.VarChar(50)
+  bunny_video_id      String?  @db.VarChar(100)
+  firebase_link       String?  @db.VarChar(255)
+  bunny_collection_id String?  @db.VarChar(255)
+  video_time          Int?
+}
+
+model roles {
+  id         Int      @id @default(autoincrement())
+  group      String?  @db.VarChar(100)
+  module     String?  @db.VarChar(100)
+  end_point  String?  @db.VarChar(100)
+  can_read   Boolean?
+  can_create Boolean?
+  can_update Boolean?
+  can_delete Boolean?
+
+  @@index([group], map: "groups")
+  @@index([module], map: "modules")
+}
+
+model rooms {
+  id                Int                 @id @default(autoincrement())
+  title             String?             @db.VarChar(100)
+  building          Int?
+  capacity          Int?
+  rows              Int?
+  columns           Int?
+  remedials         remedials[]
+  students_subjects students_subjects[]
+}
+
+model scales {
+  id       Int       @id @default(autoincrement())
+  subject  Int?
+  title    String?   @db.VarChar(100)
+  grade    Decimal?  @db.Decimal(10, 2)
+  gpa      Decimal?  @db.Decimal(10, 2)
+  subjects subjects? @relation(fields: [subject], references: [id], onDelete: Cascade, map: "subject_scales")
+
+  @@index([id], map: "scale_id")
+  @@index([subject], map: "subject_scales")
+}
+
+model school_activities {
+  id          Int       @id @default(autoincrement())
+  title       String?   @db.VarChar(200)
+  price       Decimal?  @db.Decimal(10, 2)
+  from_date   DateTime? @db.DateTime(6)
+  to_date     DateTime? @db.DateTime(6)
+  description String?   @db.VarChar(255)
+}
+
+model school_fees {
+  id        Int       @id @default(autoincrement())
+  branch_id Int?
+  grade_id  Int?
+  year      Int?
+  price     Int?
+  fees      fees[]
+  branches  branches? @relation(fields: [branch_id], references: [id], onDelete: Cascade, map: "branch_id")
+  grades    grades?   @relation(fields: [grade_id], references: [id], onDelete: Cascade, map: "fk_grade_id")
+  years     years?    @relation(fields: [year], references: [id], onDelete: Cascade, map: "fk_year")
+
+  @@index([branch_id], map: "branch_id_idx")
+  @@index([grade_id], map: "fk_grade_id_idx")
+  @@index([year], map: "fk_year_idx")
+  @@index([grade_id], map: "grade_id_idx")
+}
+
+model schools {
+  id     Int      @id @default(autoincrement())
+  title  String?  @db.VarChar(255)
+  active Boolean?
+  logo   String?  @db.VarChar(255)
+}
+
+model scores {
+  id         Int    @id @default(autoincrement())
+  student    Int?
+  subject    Int?
+  breakdown  Int?
+  weight     Int?
+  score      Float? @db.Float
+  percentage Float? @db.Float
+}
+
+model sections {
+  id      Int     @id @default(autoincrement())
+  subject Int?
+  title   String? @db.VarChar(255)
+  owner   Int?
+}
+
+model signals {
+  id       Int     @id @default(autoincrement())
+  activity Int?
+  intime   Int?
+  totime   Int?
+  type     String? @db.VarChar(255)
+  link     String? @db.VarChar(255)
+  question Int?
+}
+
+model stage_tags {
+  id                   Int                    @id @default(autoincrement())
+  title                String?                @db.VarChar(100)
+  employees_stage_tags employees_stage_tags[]
+  stages_stage_tags    stages_stage_tags[]
+}
+
+model stages {
+  id                Int                 @id @default(autoincrement())
+  title             String?             @db.VarChar(255)
+  branch            Int?
+  employees_stages  employees_stages[]
+  grades            grades[]
+  branches          branches?           @relation(fields: [branch], references: [id], onDelete: Cascade, map: "fk_branch_id_stage")
+  stages_stage_tags stages_stage_tags[]
+
+  @@index([branch], map: "fk_branch_id_stage_idx")
+}
+
+model stages_stage_tags {
+  id           Int         @id @default(autoincrement())
+  stage_id     Int?
+  stage_tag_id Int?
+  stage_tags   stage_tags? @relation(fields: [stage_tag_id], references: [id], onDelete: Cascade, map: "fk_stage-tag_id")
+  stages       stages?     @relation(fields: [stage_id], references: [id], onDelete: Cascade, map: "fk_stage_idx")
+
+  @@index([stage_id], map: "fk_stage_id_idx")
+  @@index([stage_id], map: "fk_stage_idx_idx")
+  @@index([stage_tag_id], map: "fk_stage_tag_id_idx")
+}
+
+model standards {
+  id                    Int                     @id @default(autoincrement())
+  code                  String?                 @db.VarChar(100)
+  domain                String?                 @db.VarChar(255)
+  cluster               String?                 @db.VarChar(255)
+  title                 String?                 @db.Text
+  parent                Int?
+  subject               Int?
+  source                String?                 @db.VarChar(255)
+  strand                String?                 @db.VarChar(255)
+  anchor                String?                 @db.VarChar(255)
+  description           String?                 @db.Text
+  standards_assignments standards_assignments[]
+  standards_lessons     standards_lessons[]
+  standards_questions   standards_questions[]
+  standards_resources   standards_resources[]
+}
+
+model standards_assignments {
+  id         Int        @id @default(autoincrement())
+  assignment Int?
+  standard   Int?
+  standards  standards? @relation(fields: [standard], references: [id], onDelete: Cascade, map: "assignments_standards")
+
+  @@index([standard], map: "assignments_standards")
+}
+
+model standards_lessons {
+  id        Int        @id @default(autoincrement())
+  lesson    Int?
+  standard  Int?
+  standards standards? @relation(fields: [standard], references: [id], onDelete: Cascade, map: "lessons_standards")
+
+  @@index([standard], map: "lessons_standards")
+}
+
+model standards_questions {
+  id        Int        @id @default(autoincrement())
+  question  Int?
+  standard  Int?
+  standards standards? @relation(fields: [standard], references: [id], onDelete: Cascade, map: "questions_standards")
+
+  @@index([standard], map: "questions_standards")
+}
+
+model standards_resources {
+  id        Int        @id @default(autoincrement())
+  resource  Int?
+  standard  Int?
+  standards standards? @relation(fields: [standard], references: [id], onDelete: Cascade, map: "resources_standards")
+
+  @@index([standard], map: "resources_standards")
+}
+
+model status_logs {
+  id               Int               @id @default(autoincrement())
+  student          Int?
+  status           Int?
+  comment          String?           @db.VarChar(255)
+  status_date      String?           @db.VarChar(100)
+  editor           Int?
+  employees        employees?        @relation(fields: [editor], references: [id], onUpdate: Restrict, map: "editors")
+  admission_status admission_status? @relation(fields: [status], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "status_type")
+
+  @@index([editor], map: "editors")
+  @@index([status], map: "status_type")
+}
+
+model students {
+  id                           Int                            @id @default(autoincrement())
+  uid                          String?                        @db.VarChar(255)
+  firstname                    String?                        @db.VarChar(255)
+  lastname                     String?                        @db.VarChar(255)
+  gender                       String?                        @db.VarChar(255)
+  secondlanguage               String?                        @db.VarChar(255)
+  religion                     String?                        @db.VarChar(255)
+  phone                        String?                        @db.VarChar(100)
+  mobile                       String?                        @db.VarChar(100)
+  email                        String?                        @db.VarChar(255)
+  branch                       Int?
+  grade                        Int?
+  cohort                       Int?
+  classroom                    Int?
+  citizenship                  String?                        @db.VarChar(255)
+  withdraw                     Boolean?
+  points                       Int?
+  date_of_birth                String?                        @db.VarChar(100)
+  image                        String?                        @db.VarChar(255)
+  address                      String?                        @db.VarChar(255)
+  preschool                    String?                        @db.VarChar(255)
+  father_mobile                String?                        @db.VarChar(255)
+  father_email                 String?                        @db.VarChar(255)
+  father_degree                String?                        @db.VarChar(255)
+  father_company               String?                        @db.VarChar(255)
+  father_occupation            String?                        @db.VarChar(255)
+  mother_name                  String?                        @db.VarChar(255)
+  mother_mobile                String?                        @db.VarChar(100)
+  mother_email                 String?                        @db.VarChar(255)
+  mother_degree                String?                        @db.VarChar(255)
+  mother_company               String?                        @db.VarChar(255)
+  mother_occupation            String?                        @db.VarChar(255)
+  previous_school              String?                        @db.VarChar(255)
+  havesibling                  String?                        @db.VarChar(50)
+  parentsEmployee              String?                        @db.VarChar(50)
+  username                     String?                        @db.VarChar(255)
+  password                     String?                        @db.VarChar(255)
+  national_id                  String?                        @db.VarChar(100)
+  father_nationalid            String?                        @db.VarChar(100)
+  mother_nationalid            String?                        @db.VarChar(100)
+  family_id                    Int?
+  discount                     Int?
+  discount_type                Int?
+  enrollment_year              Int?
+  suspended                    Boolean?
+  by_subject                   Boolean?
+  emergency_contact_name       String?                        @db.VarChar(255)
+  emergency_contact_number     String?                        @db.VarChar(45)
+  emergency_contact_relation   String?                        @db.VarChar(45)
+  full_arabic_name             String?                        @db.VarChar(350)
+  mother_arabic_name           String?                        @db.VarChar(350)
+  full_name                    String?                        @db.VarChar(500)
+  klickit_email                String?                        @db.VarChar(255)
+  klickit_password             String?                        @db.VarChar(45)
+  assistant_id                 Int?
+  bus_gate                     String?                        @db.VarChar(255)
+  accept_eula                  Int?                           @default(0) @db.TinyInt
+  eula_version                 String?                        @db.VarChar(45)
+  klickit_flag                 Int?                           @default(0) @db.TinyInt
+  thread_id                    String?                        @db.VarChar(255)
+  token_version                Int?                           @default(0)
+  blended_id                   Int?
+  ai_chats                     ai_chats?
+  answers                      answers[]
+  chats                        chats[]
+  fees                         fees[]
+  gamification_requests        gamification_requests[]
+  lesson_resources_submissions lesson_resources_submissions[]
+  messages                     messages[]
+  messages_grouping            messages_grouping[]
+  offer_views                  offer_views[]
+  parents_students             parents_students[]
+  payments                     payments[]
+  practices                    practices[]
+  requests                     requests[]
+  branches                     branches?                      @relation(fields: [branch], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "branches")
+  classrooms                   classrooms?                    @relation(fields: [classroom], references: [id], map: "classroom")
+  cohorts                      cohorts?                       @relation(fields: [cohort], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "cohorts")
+  years                        years?                         @relation(fields: [enrollment_year], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "enrollment")
+  assignments                  assignments?                   @relation(fields: [blended_id], references: [id], onUpdate: SetNull, map: "fk_students_blended_id")
+  grades                       grades?                        @relation(fields: [grade], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "grades")
+  students_behaviour_records   students_behaviour_records[]
+  students_evaluation          students_evaluation[]
+  students_lessons_reports     students_lessons_reports[]
+  students_notifications       students_notifications[]
+  students_showcase            students_showcase[]
+  students_subjects            students_subjects[]
+  students_transfers           students_transfers[]
+  students_weekly_reports      students_weekly_reports[]
+  students_withdrawals         students_withdrawals[]
+  submissions                  submissions[]
+  submissions_details          submissions_details[]
+  turnitin_submissions         turnitin_submissions[]
+  vendor_offer_codes           vendor_offer_codes[]
+  vendor_student_qrcode        vendor_student_qrcode[]
+
+  @@index([branch], map: "branch")
+  @@index([classroom], map: "classroom")
+  @@index([cohort], map: "cohorts")
+  @@index([enrollment_year], map: "enrollment")
+  @@index([grade], map: "grades")
+  @@index([id], map: "idx_students_id")
+  @@index([father_email], map: "idx_father_email")
+  @@index([mother_email], map: "idx_mother_email")
+  @@index([withdraw], map: "idx_withdraw")
+  @@index([blended_id], map: "fk_students_blended_id_idx")
+  @@fulltext([full_name], map: "full_name")
+}
+
+model students_behaviour_records {
+  id                    Int                                @id @default(autoincrement())
+  student_id            Int?
+  employee_id           Int?
+  violation_id          Int?
+  comment               String?                            @db.VarChar(255)
+  created_at            DateTime?                          @default(now()) @db.Timestamp(0)
+  status                students_behaviour_records_status? @default(pending)
+  attachment            String?                            @db.VarChar(255)
+  employees             employees?                         @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "employee_id_fk3")
+  behavioral_violations behavioral_violations?             @relation(fields: [violation_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_violation_id_students_behaviour_records")
+  students              students?                          @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "student_id_fk3")
+
+  @@index([employee_id], map: "employee_id_fk3_idx")
+  @@index([student_id], map: "student_id_fk3_idx")
+  @@index([violation_id], map: "fk_violation_id_students_behaviour_records_idx")
+}
+
+model students_evaluation {
+  id             Int          @id @default(autoincrement())
+  student_id     Int?
+  evaluation_id  Int?
+  academic       String?      @db.VarChar(100)
+  behavior       String?      @db.VarChar(100)
+  commitment     String?      @db.VarChar(100)
+  positive_notes String?      @db.Text
+  enhance        String?      @db.Text
+  created_by     Int?
+  created_date   DateTime?    @db.DateTime(6)
+  evaluations    evaluations? @relation(fields: [evaluation_id], references: [id], onDelete: Cascade, map: "eva_evaluations")
+  students       students?    @relation(fields: [student_id], references: [id], onDelete: Cascade, map: "eva_students")
+
+  @@index([evaluation_id], map: "eva_evaluations")
+  @@index([student_id], map: "eva_students")
+}
+
+model students_grades {
+  id        Int    @id @default(autoincrement())
+  student   Int?
+  subject   Int?
+  breakdown Int?
+  weight    Int?
+  overall   Float? @db.Float
+}
+
+model students_subjects {
+  id         Int         @id @default(autoincrement())
+  student    Int?
+  subject    Int?
+  classroom  Int?
+  room       Int?
+  start_date DateTime?   @db.DateTime(0)
+  end_date   DateTime?   @db.DateTime(0)
+  classrooms classrooms? @relation(fields: [classroom], references: [id], onDelete: Cascade, map: "students_subjects_classroooms")
+  subjects   subjects?   @relation(fields: [subject], references: [id], onDelete: Cascade, map: "students_subjects_ibfk_1")
+  students   students?   @relation(fields: [student], references: [id], onDelete: Cascade, map: "students_subjects_ibfk_2")
+  rooms      rooms?      @relation(fields: [room], references: [id], onDelete: Cascade, map: "students_subjects_room")
+
+  @@index([subject], map: "owners")
+  @@index([student], map: "owners_emp")
+  @@index([classroom], map: "students_subjects_classroooms")
+  @@index([room], map: "students_subjects_room")
+}
+
+model students_transfers {
+  id                                               Int       @id @default(autoincrement())
+  student                                          Int?
+  branch                                           Int?
+  grade                                            Int?
+  academic_year                                    Int?
+  status                                           String?   @db.VarChar(255)
+  description                                      String?   @db.VarChar(255)
+  created_at                                       DateTime? @default(now()) @db.Timestamp(0)
+  new_branch                                       Int?
+  new_grade                                        Int?
+  branches_students_transfers_new_branchTobranches branches? @relation("students_transfers_new_branchTobranches", fields: [new_branch], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_new_branch_id")
+  grades_students_transfers_new_gradeTogrades      grades?   @relation("students_transfers_new_gradeTogrades", fields: [new_grade], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_new_grade")
+  students                                         students? @relation(fields: [student], references: [id], onDelete: Cascade, map: "fk_new_student")
+  branches_students_transfers_branchTobranches     branches? @relation("students_transfers_branchTobranches", fields: [branch], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_old_branch")
+  grades_students_transfers_gradeTogrades          grades?   @relation("students_transfers_gradeTogrades", fields: [grade], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fl_old_grade")
+
+  @@index([new_branch], map: "fk_new_branch_id_idx")
+  @@index([student], map: "fk_new_student_idx")
+  @@index([branch], map: "fk_old_branch_idx")
+  @@index([grade], map: "fl_old_grade_idx")
+  @@index([new_grade], map: "new_grade_id_idx")
+  @@index([student], map: "student_id_idx")
+}
+
+model students_withdrawals {
+  id            Int       @id @default(autoincrement())
+  student_id    Int?
+  academic_year Int?
+  reason        String?   @db.VarChar(255)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+  years         years?    @relation(fields: [academic_year], references: [id], onDelete: Cascade, map: "fk_academic_year")
+  students      students? @relation(fields: [student_id], references: [id], onDelete: Cascade, map: "fk_student_id_x")
+
+  @@index([academic_year], map: "fk_academic_year_idx")
+  @@index([student_id], map: "fk_student_id_x_idx")
+}
+
+model subjects {
+  id                       Int                        @id @default(autoincrement())
+  title                    String?                    @db.VarChar(100)
+  description              String?                    @db.VarChar(200)
+  grade                    Int?
+  ref                      String?                    @db.VarChar(255)
+  mirror                   Int?
+  source                   Int?
+  participation            Int?
+  points                   Int?
+  questions                Int?
+  videos                   Int?
+  sheets                   Int?
+  active                   Int?
+  icon                     String?                    @db.VarChar(255)
+  admission                Boolean?
+  exam                     Boolean?
+  assignments              assignments[]
+  chats                    chats[]
+  cohort_subjects          cohort_subjects[]
+  employees_subjects       employees_subjects[]
+  enrollments              enrollments[]
+  flags                    flags[]
+  hr_candidates            hr_candidates[]
+  lesson_plan              lesson_plan[]
+  lessons                  lessons[]
+  lives                    lives[]
+  logs                     logs[]
+  practices                practices[]
+  remedials                remedials[]
+  scales                   scales[]
+  students_lessons_reports students_lessons_reports[]
+  students_subjects        students_subjects[]
+  subject_overviews        subject_overview?
+  subject_strands          subject_strands[]
+  subject_units            subject_units[]
+  subjects                 subjects?                  @relation("subjectsTosubjects", fields: [mirror], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "mirror")
+  other_subjects           subjects[]                 @relation("subjectsTosubjects")
+  grades                   grades?                    @relation(fields: [grade], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "subject_grade")
+  timetables               timetables[]
+
+  @@index([mirror], map: "mirror")
+  @@index([grade], map: "subject_grade")
+  @@index([id], map: "subject_id")
+  @@fulltext([title], map: "subject_title")
+}
+
+model subject_overview {
+  id         Int      @id @default(autoincrement())
+  subject_id Int      @unique
+  overview   String?  @db.Text
+  subject    subjects @relation(fields: [subject_id], references: [id], onUpdate: Restrict)
+
+  @@index([subject_id])
+}
+
+model submissions {
+  id                     Int                   @id @default(autoincrement())
+  student_id             Int?
+  assignment_id          Int?
+  grade                  Float?
+  right_answers          Int?
+  wrong_answers          Int?
+  missed_answers         Int?
+  type                   String?               @db.VarChar(100)
+  submission_date        DateTime?             @db.DateTime(6)
+  mark_date              DateTime?             @db.DateTime(6)
+  mark_by                Int?
+  feedback               String?               @db.Text
+  audio_feedback         String?               @db.VarChar(255)
+  status                 String?               @db.VarChar(255)
+  description            String?               @db.VarChar(255)
+  time                   Int?                  @default(0)
+  video_paused_at_second Int?
+  paused_page_number     Int?
+  answers                answers[]
+  assignments            assignments?          @relation(fields: [assignment_id], references: [id], onDelete: Cascade, map: "assignment")
+  students               students?             @relation(fields: [student_id], references: [id], onDelete: Cascade, map: "student")
+  submissions_details    submissions_details[]
+
+  @@index([assignment_id], map: "assignment_id")
+  @@index([assignment_id], map: "idx_submissions_assignment_id")
+  @@index([student_id], map: "student")
+  @@index([submission_date], map: "submission_date")
+  @@index([id], map: "submission_id")
+  @@index([assignment_id, student_id], map: "idx_submissions_assignment_student")
+  @@fulltext([type], map: "submissions_type")
+}
+
+model submissions_details {
+  id                         Int                       @id @default(autoincrement())
+  submission                 Int?
+  question                   Int?
+  answer_id                  Int?
+  grade                      Decimal?                  @db.Decimal(6, 3)
+  right_answer               Int?                      @db.TinyInt
+  file                       String?                   @db.Text
+  answer                     String?                   @db.Text
+  feedback                   String?                   @db.VarChar(255)
+  student_id                 Int?
+  section_id                 Int?
+  time                       Int?
+  is_correct                 Int?                      @default(0) @db.TinyInt
+  file_firebase_link         String?                   @db.VarChar(512)
+  file_bunny_library_id      String?                   @db.VarChar(50)
+  file_bunny_video_id        String?                   @db.VarChar(100)
+  answer_firebase_link       String?                   @db.VarChar(512)
+  answer_bunny_library_id    String?                   @db.VarChar(50)
+  answer_bunny_video_id      String?                   @db.VarChar(100)
+  file_bunny_collection_id   String?                   @db.VarChar(255)
+  answer_bunny_collection_id String?                   @db.VarChar(255)
+  file_video_time            Int?
+  answer_video_time          Int?
+  questions                  questions?                @relation(fields: [question], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_submissions_details_question")
+  sections                   lesson_resource_sections? @relation(fields: [section_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_submissions_details_section_id")
+  students                   students?                 @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_submissions_details_student_id")
+  submissions                submissions?              @relation(fields: [submission], references: [id], onDelete: Cascade, map: "submission_det")
+
+  @@index([submission], map: "submission_det_idx")
+  @@index([question], map: "fk_submissions_details_question_idx")
+  @@index([section_id], map: "fk_submissions_details_section_id_idx")
+  @@index([student_id], map: "fk_submissions_details_student_id_idx")
+  @@index([submission], map: "submission_det_id")
+  @@index([answer_bunny_video_id])
+  @@index([file_bunny_video_id])
+}
+
+model submissions_logs {
+  id            Int      @id @default(autoincrement())
+  submission_id Int
+  created_at    DateTime @default(now()) @db.Timestamp(0)
+  action        String?  @db.VarChar(45)
+  assignment_id Int
+  student_id    Int
+  user_id       Int
+}
+
+model subordinates {
+  id                                            Int        @id @default(autoincrement())
+  employee                                      Int?
+  subordinate                                   Int?
+  report                                        String?    @db.VarChar(50)
+  employees_subordinates_subordinateToemployees employees? @relation("subordinates_subordinateToemployees", fields: [subordinate], references: [id], onDelete: Cascade, map: "subordinates_ibfk_1")
+  employees_subordinates_employeeToemployees    employees? @relation("subordinates_employeeToemployees", fields: [employee], references: [id], onDelete: Cascade, map: "subordinates_ibfk_2")
+
+  @@index([subordinate], map: "owners")
+  @@index([employee], map: "owners_emp")
+}
+
+model tags {
+  id        Int         @id @default(autoincrement())
+  subject   Int?
+  title     String?     @db.VarChar(100)
+  questions questions[]
+}
+
+model targets {
+  id                Int                 @id @default(autoincrement())
+  target_name       String?             @db.VarChar(255)
+  employees_targets employees_targets[]
+}
+
+model tasks {
+  id            Int       @id @default(autoincrement())
+  student       Int?
+  due_date      DateTime? @db.DateTime(6)
+  subject       Int?
+  lesson        Int?
+  type          String?   @db.VarChar(100)
+  title         String?   @db.VarChar(255)
+  status        Boolean?
+  complete_date DateTime? @db.DateTime(6)
+}
+
+model taxonomies {
+  id          Int     @id @default(autoincrement())
+  title       String? @db.VarChar(100)
+  description String? @db.VarChar(255)
+}
+
+model teachers {
+  id          Int           @id @default(autoincrement())
+  firstname   String?       @db.VarChar(255)
+  lastname    String?       @db.VarChar(255)
+  image       String?       @db.VarChar(255)
+  bio         String?       @db.Text
+  title       String?       @db.VarChar(255)
+  discription String?       @db.VarChar(255)
+  email       String?       @db.VarChar(255)
+  active      Boolean?
+  role        Int?
+  school      Int?
+  enrollments enrollments[]
+  reels       reels[]
+}
+
+model timetables {
+  id          Int        @id @default(autoincrement())
+  cohort      Int?
+  subject     Int?
+  teacher     Int?
+  start_at    String?    @db.VarChar(50)
+  end_at      String?    @db.VarChar(50)
+  duration    Int?
+  day         String?    @db.VarChar(100)
+  description String?    @db.VarChar(255)
+  subjects    subjects?  @relation(fields: [subject], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "timetable_subject")
+  employees   employees? @relation(fields: [teacher], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "timetable_teacher")
+
+  @@index([subject], map: "timetable_subject")
+  @@index([teacher], map: "timetable_teacher")
+}
+
+model users {
+  id        Int     @id @default(autoincrement())
+  employee  Int?
+  firstname String? @db.VarChar(255)
+  lastname  String? @db.VarChar(255)
+  email     String? @db.VarChar(255)
+  mobile    String? @db.VarChar(100)
+  role      Int?
+
+  @@index([employee], map: "teacher")
+}
+
+model vacancies {
+  id          Int       @id @default(autoincrement())
+  job         Int?
+  title       String?   @db.VarChar(255)
+  description String?   @db.VarChar(255)
+  vacancies   Int?
+  open_date   DateTime? @db.DateTime(0)
+  close_date  DateTime? @db.DateTime(0)
+}
+
+model vendor_branch_offers {
+  id               Int             @id @default(autoincrement())
+  vendor_branch_id Int
+  offer_id         Int
+  offers           offers          @relation(fields: [offer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "offer_id")
+  vendor_branches  vendor_branches @relation(fields: [vendor_branch_id], references: [id], onDelete: Cascade, map: "vendor_branch_id")
+
+  @@index([offer_id], map: "offer_id_idx")
+  @@index([vendor_branch_id], map: "vendor_branch_id_idx")
+}
+
+model vendor_branches {
+  id                   Int                    @id @default(autoincrement())
+  branch_name          String?                @db.VarChar(100)
+  city                 Int
+  vendor               Int
+  location             String?                @db.VarChar(255)
+  lat                  String?                @db.VarChar(100)
+  long                 String?                @db.VarChar(100)
+  vendor_branch_offers vendor_branch_offers[]
+  cities               cities                 @relation(fields: [city], references: [id], onDelete: Cascade, map: "city")
+  vendors              vendors                @relation(fields: [vendor], references: [id], onDelete: Cascade, map: "vendor")
+  vendor_offer_codes   vendor_offer_codes[]
+
+  @@index([city], map: "city_idx")
+  @@index([vendor], map: "vendor_idx")
+}
+
+model vendor_categories {
+  id      Int       @id @default(autoincrement())
+  name    String    @unique(map: "name_UNIQUE") @db.VarChar(100)
+  image   String?   @db.VarChar(300)
+  active  Boolean?  @default(true)
+  vendors vendors[]
+}
+
+model vendor_offer_codes {
+  id                  Int              @id @default(autoincrement())
+  code                String           @db.VarChar(45)
+  student_id          Int?
+  offers_id           Int
+  is_used             Int?             @default(0) @db.TinyInt
+  created_at          DateTime?        @default(now()) @db.DateTime(0)
+  activated_date      DateTime?        @db.DateTime(0)
+  vendor_id           Int
+  activated_branch_id Int?
+  vendor_branches     vendor_branches? @relation(fields: [activated_branch_id], references: [id], onDelete: Cascade, map: "fk_branch_id")
+  offers              offers           @relation(fields: [offers_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "offers_id")
+  students            students?        @relation(fields: [student_id], references: [id], onDelete: Cascade, map: "student_idx")
+  vendors             vendors          @relation(fields: [vendor_id], references: [id], onDelete: Cascade, map: "vendors_id")
+
+  @@index([activated_branch_id], map: "branch_id_idx")
+  @@index([offers_id], map: "offers_id_idx")
+  @@index([student_id], map: "student_id_idx")
+  @@index([vendor_id], map: "vendor_id_idx")
+}
+
+model vendor_student_qrcode {
+  id         Int      @id @default(autoincrement())
+  student_id Int
+  created_at DateTime @db.DateTime(0)
+  expires_at DateTime @db.DateTime(0)
+  students   students @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_id_students")
+
+  @@index([student_id], map: "fk_student_id_students_idx")
+}
+
+model vendors {
+  id                 Int                  @id @default(autoincrement())
+  name               String               @db.VarChar(100)
+  email              String               @unique(map: "email_UNIQUE") @db.VarChar(100)
+  password           String               @db.VarChar(100)
+  phone              String               @db.VarChar(100)
+  category           Int
+  logo               String?              @db.VarChar(300)
+  uid                String?              @db.VarChar(100)
+  is_online          Int?                 @default(0) @db.TinyInt
+  region             String?              @db.VarChar(255)
+  offers             offers[]
+  vendor_branches    vendor_branches[]
+  vendor_offer_codes vendor_offer_codes[]
+  vendor_categories  vendor_categories    @relation(fields: [category], references: [id], onDelete: Cascade, map: "category")
+
+  @@index([category], map: "category_idx")
+}
+
+model weeks {
+  id           Int            @id @default(autoincrement())
+  week_name    String?        @db.VarChar(45)
+  assignments  assignments[]
+  branch_weeks branch_weeks[]
+}
+
+model weights {
+  id          Int           @id @default(autoincrement())
+  title       String?       @db.VarChar(255)
+  order       Int?
+  weight      Int?
+  subject     Int?
+  module      String?       @db.VarChar(255)
+  tag         String?       @db.VarChar(255)
+  max_grade   Float?
+  assignments assignments[]
+  attendances attendances[]
+  remedials   remedials[]
+
+  @@index([id], map: "w_id")
+}
+
+model weights_overall {
+  id        Int    @id @default(autoincrement())
+  student   Int?
+  subject   Int?
+  weight    Int?
+  breakdown Int?
+  overall   Float? @db.Float
+}
+
+model withdraw_requests {
+  id            Int     @id @default(autoincrement())
+  student       Int?
+  academic_year Int?
+  status        String? @db.VarChar(255)
+  description   String? @db.VarChar(255)
+}
+
+model wprogress {
+  id                        String  @id @db.VarChar(255)
+  student                   Int?
+  system                    String? @db.VarChar(255)
+  grade                     String? @db.VarChar(255)
+  subject                   String? @db.VarChar(255)
+  week_title                String? @db.VarChar(255)
+  week_path                 String? @db.VarChar(255)
+  right_answers             Int?
+  wrong_answers             Int?
+  bloom_knowledge_right     Int?
+  bloom_knowledge_wrong     Int?
+  bloom_application_right   Int?
+  bloom_application_wrong   Int?
+  bloom_understanding_right Int?
+  bloom_understanding_wrong Int?
+  bloom_analysis_right      Int?
+  bloom_analysis_wrong      Int?
+  bloom_creating_right      Int?
+  bloom_creating_wrong      Int?
+  bloom_evaluation_right    Int?
+  bloom_evaluation_wrong    Int?
+  dok_recall_right          Int?
+  dok_recall_wrong          Int?
+  dok_skill_right           Int?
+  dok_skill_wrong           Int?
+  dok_strategic_right       Int?
+  dok_strategic_wrong       Int?
+  dok_extended_right        Int?
+  dok_extended_wrong        Int?
+}
+
+model years {
+  id                                   Int                                @id @default(autoincrement())
+  title                                String?                            @db.VarChar(100)
+  open                                 Boolean?
+  current_year                         Boolean?
+  assignments                          assignments[]
+  candidates                           candidates[]
+  cqrs_subjects_breakdowns_overall     cqrs_subjects_breakdowns_overall[]
+  cqrs_subjects_overall                cqrs_subjects_overall[]
+  pending_payments                     pending_payments[]
+  prices_prices_academic_yearToyears   prices[]                           @relation("prices_academic_yearToyears")
+  prices_prices_enrollment_yearToyears prices[]                           @relation("prices_enrollment_yearToyears")
+  school_fees                          school_fees[]
+  students                             students[]
+  students_withdrawals                 students_withdrawals[]
+}
+
+model students_showcase {
+  id         Int       @id @default(autoincrement())
+  student_id Int
+  image      String    @db.VarChar(255)
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  students   students  @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "student_id_student_showcase_fk")
+
+  @@index([student_id], map: "student_id_student_showcase_fk_idx")
+}
+
+model loyality_tickets {
+  id          Int     @id @default(autoincrement())
+  title       String? @db.VarChar(255)
+  category    String? @db.VarChar(45)
+  region      String? @db.VarChar(45)
+  front_image String? @db.VarChar(255)
+  back_image  String? @db.VarChar(255)
+}
+
+model announcements {
+  id                  Int                   @id @default(autoincrement())
+  title               String                @db.VarChar(255)
+  description         String                @db.Text
+  photo               String                @db.VarChar(255)
+  type                announcements_type    @default(nis)
+  created_at          DateTime?             @default(now()) @db.DateTime(0)
+  announcement_branch announcement_branch[]
+  announcement_grade  announcement_grade[]
+}
+
+model announcement_grade {
+  id              Int           @id @default(autoincrement())
+  grade_id        Int
+  announcement_id Int
+  announcements   announcements @relation(fields: [announcement_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_announcement_grade_announcement_id")
+  grades          grades        @relation(fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_announcement_grade_grade_id")
+
+  @@index([announcement_id], map: "fk_announment_grade_announcement_id_idx")
+  @@index([grade_id], map: "fk_announment_grade_grade_id_idx")
+}
+
+model announcement_branch {
+  id              Int           @id @default(autoincrement())
+  branch_id       Int
+  announcement_id Int
+  announcements   announcements @relation(fields: [announcement_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_announcement_branch_announcement_id")
+  branches        branches      @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_announcement_branch_branch_id")
+
+  @@index([announcement_id], map: "announment_branch_announcement_id_idx")
+  @@index([branch_id], map: "fk_announment_branch_branch_id_idx")
+}
+
+model parents_notifications {
+  id              Int           @id @default(autoincrement())
+  parent_id       Int?
+  notification_id Int
+  is_read         Boolean?      @default(false)
+  notifications   notifications @relation(fields: [notification_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_parents_notifications_notification_id")
+  parents         parents?      @relation(fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_parents_notifications_parent_idI")
+
+  @@index([notification_id], map: "fk_parents_notifications_notification_id_idx")
+  @@index([parent_id], map: "fk_parents_notifications_parent_id_idx1")
+}
+
+model parents_students {
+  id         Int      @id @default(autoincrement())
+  student_id Int
+  parent_id  Int
+  students   students @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "parents_students_ibfk_1")
+  parents    parents  @relation(fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "parents_students_ibfk_2")
+
+  @@unique([student_id, parent_id], map: "unique_student_parent")
+  @@index([parent_id], map: "parent_id")
+}
+
+model devices {
+  id           Int     @id @default(autoincrement())
+  device_id    String  @db.VarChar(45)
+  device_name  String? @db.VarChar(45)
+  device_token String  @db.VarChar(500)
+  parent_id    Int
+  parents      parents @relation(fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_devices_parent_id")
+
+  @@index([parent_id], map: "fk_devices_parent_id_idx")
+}
+
+model settings {
+  id    Int     @id @default(autoincrement())
+  bunny Boolean @default(false)
+}
+
+model lesson_plan {
+  id                    Int                     @id @default(autoincrement())
+  title                 String                  @db.VarChar(250)
+  lesson_id             Int
+  employee_id           Int
+  created_at            DateTime?               @default(now()) @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  is_deleted            Boolean?                @default(false)
+  subject_id            Int?
+  lessons               lessons                 @relation(fields: [lesson_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plan_lesson_id")
+  subjects              subjects?               @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plan_subject_id")
+  employees             employees               @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plan_teacher_id")
+  lesson_plan_classroom lesson_plan_classroom[]
+  lesson_plan_details   lesson_plan_details[]
+
+  @@index([lesson_id], map: "fk_lesson_plan_lesson_id_idx")
+  @@index([employee_id], map: "fk_lesson_plan_teacher_id_idx")
+  @@index([subject_id], map: "fk_lesson_plan_subject_id_idx")
+}
+
+model lesson_plan_activity_duration {
+  id                                                                                               Int                   @id @default(autoincrement())
+  lesson_plan_detail_id                                                                            Int
+  employee_id                                                                                      Int
+  duration                                                                                         Int                   @default(0)
+  lesson_plan_classroom                                                                            Int
+  lesson_plan_classroom_lesson_plan_activity_duration_lesson_plan_classroomTolesson_plan_classroom lesson_plan_classroom @relation("lesson_plan_activity_duration_lesson_plan_classroomTolesson_plan_classroom", fields: [lesson_plan_classroom], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plan_activity_duration_lesson_plan_classroom_id")
+  lesson_plan_details                                                                              lesson_plan_details   @relation(fields: [lesson_plan_detail_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plan_activity_duration_lesson_plan_details_id")
+  employees                                                                                        employees             @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plan_activity_duration_teacher_id")
+
+  @@index([lesson_plan_detail_id], map: "fk_lesson_plan_activity_duration_lesson_plan_details_id_idx")
+  @@index([employee_id], map: "fk_lesson_plan_activity_duration_teacher_id_idx")
+  @@index([lesson_plan_classroom], map: "fk_lesson_plan_activity_duration_lesson_plan_classroom_id_idx")
+}
+
+model lesson_plan_classroom {
+  id                                                                                                       Int                                  @id @default(autoincrement())
+  lesson_plan_id                                                                                           Int
+  classroom_id                                                                                             Int
+  employee_id                                                                                              Int
+  current_status                                                                                           lesson_plan_classroom_current_status @default(not_started)
+  lesson_plan_details_id                                                                                   Int?
+  created_at                                                                                               DateTime?                            @default(now()) @db.Timestamp(0)
+  updated_at                                                                                               DateTime?                            @db.Timestamp(0)
+  lesson_plan_activity_duration_lesson_plan_activity_duration_lesson_plan_classroomTolesson_plan_classroom lesson_plan_activity_duration[]      @relation("lesson_plan_activity_duration_lesson_plan_classroomTolesson_plan_classroom")
+  classrooms                                                                                               classrooms                           @relation(fields: [classroom_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plans_classrooms_classroom_id")
+  lesson_plan_details                                                                                      lesson_plan_details?                 @relation(fields: [lesson_plan_details_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plans_classrooms_lesson_plan_details")
+  lesson_plan                                                                                              lesson_plan                          @relation(fields: [lesson_plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plans_classrooms_lesson_plan_id")
+  employees                                                                                                employees                            @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plans_classrooms_teacher_id")
+  lesson_plan_logs_lesson_plan_logs_lesson_plan_classroomTolesson_plan_classroom                           lesson_plan_logs[]                   @relation("lesson_plan_logs_lesson_plan_classroomTolesson_plan_classroom")
+
+  @@index([classroom_id], map: "fk_lesson_plans_classrooms_classroom_id_idx")
+  @@index([lesson_plan_details_id], map: "fk_lesson_plans_classrooms_lesson_plan_details_idx")
+  @@index([lesson_plan_id], map: "fk_lesson_plans_classrooms_lesson_plan_id_idx")
+  @@index([employee_id], map: "fk_lesson_plans_classrooms_teacher_id_idx")
+}
+
+model lesson_plan_details {
+  id                            Int                             @id @default(autoincrement())
+  title                         String?                         @db.VarChar(250)
+  lesson_plan_id                Int
+  employee_id                   Int
+  assignment_id                 Int?
+  resource_id                   Int?
+  type                          lesson_plan_details_type?
+  sub_type                      String?                         @db.VarChar(250)
+  description                   String?                         @db.Text
+  duration                      Int                             @default(5)
+  order                         Int?
+  created_at                    DateTime?                       @default(now()) @db.Timestamp(0)
+  updated_at                    DateTime?                       @db.Timestamp(0)
+  lesson_plan_activity_duration lesson_plan_activity_duration[]
+  lesson_plan_classroom         lesson_plan_classroom[]
+  assignments                   assignments?                    @relation(fields: [assignment_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plan_details_assignment_id")
+  lesson_plan                   lesson_plan                     @relation(fields: [lesson_plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plan_details_lesson_plan_id")
+  lesson_resources              lesson_resources?               @relation(fields: [resource_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_lesson_plan_details_resource_id")
+  employees                     employees                       @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_plan_details_teacher_id")
+
+  @@index([assignment_id], map: "fk_lesson_plan_details_assignment_id_idx")
+  @@index([lesson_plan_id], map: "fk_lesson_plan_details_lesson_plan_id_idx")
+  @@index([employee_id], map: "fk_lesson_plan_details_teacher_id_idx")
+  @@index([resource_id], map: "fk_lesson_plan_details_resource_id_idx")
+}
+
+model lesson_plan_logs {
+  id                                                                                  Int                              @id @default(autoincrement())
+  lesson_plan_classroom                                                               Int
+  new_status                                                                          lesson_plan_logs_new_status
+  previous_status                                                                     lesson_plan_logs_previous_status @default(not_started)
+  action_timestamp                                                                    DateTime                         @default(now()) @db.Timestamp(0)
+  lesson_plan_classroom_lesson_plan_logs_lesson_plan_classroomTolesson_plan_classroom lesson_plan_classroom            @relation("lesson_plan_logs_lesson_plan_classroomTolesson_plan_classroom", fields: [lesson_plan_classroom], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_lesson_plan_logs_lesson_plan_classroom_id")
+
+  @@index([lesson_plan_classroom], map: "fk_lesson_plan_logs_lesson_plan_classroom_id_idx")
+}
+
+model subject_benchmarks {
+  id                            Int                             @id @default(autoincrement())
+  title                         String                          @db.VarChar(400)
+  description                   String?                         @db.Text
+  standard_id                   Int
+  is_deleted                    Boolean?                        @default(false)
+  assignment_benchmark_standard assignment_benchmark_standard[]
+  subject_standards             subject_standards               @relation(fields: [standard_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_benchmarks_subject_standard_id")
+  subject_unit_benchmarks       subject_unit_benchmarks[]
+
+  @@index([standard_id], map: "fk_subject_benchmarks_subject_standard_id_idx")
+}
+
+model subject_standards {
+  id                            Int                             @id @default(autoincrement())
+  title                         String                          @db.VarChar(400)
+  description                   String?                         @db.Text
+  strand_id                     Int
+  is_deleted                    Boolean?                        @default(false)
+  assignment_benchmark_standard assignment_benchmark_standard[]
+  question_subject_standards    question_subject_standards[]
+  subject_benchmarks            subject_benchmarks[]
+  subject_strands               subject_strands                 @relation(fields: [strand_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_standards_strand_id")
+  subject_unit_standards        subject_unit_standards[]
+
+  @@index([strand_id], map: "fk_subject_standards_subject_stand_id_idx")
+}
+
+model subject_strands {
+  id                   Int                    @id @default(autoincrement())
+  title                String                 @db.VarChar(400)
+  description          String?                @db.Text
+  subject_id           Int
+  is_deleted           Boolean?               @default(false)
+  subject_standards    subject_standards[]
+  subjects             subjects               @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_stands_subject_id")
+  subject_unit_strands subject_unit_strands[]
+
+  @@index([subject_id], map: "fk_subject_stands_subject_id_idx")
+}
+
+model subject_units {
+  id                      Int                       @id @default(autoincrement())
+  subject_id              Int
+  lesson_id               Int
+  title                   String                    @db.VarChar(400)
+  start_date              DateTime                  @db.Timestamp(0)
+  end_date                DateTime                  @db.Timestamp(0)
+  is_deleted              Boolean?                  @default(false)
+  subject_unit_benchmarks subject_unit_benchmarks[]
+  subject_unit_standards  subject_unit_standards[]
+  subject_unit_strands    subject_unit_strands[]
+  subjects                subjects                  @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_units_subject_id")
+  unit_comments           unit_comments[]
+  unit_content            unit_content[]
+
+  @@index([lesson_id], map: "fk_subject_units_lesson_id_idx")
+  @@index([subject_id], map: "fk_subject_units_subject_id_idx")
+}
+
+model unit_content {
+  id            Int                @id @default(autoincrement())
+  unit_id       Int
+  title         String             @db.VarChar(400)
+  description   String             @db.Text
+  attachment    String?            @db.VarChar(500)
+  type          unit_content_type?
+  is_deleted    Boolean?           @default(false)
+  subject_units subject_units      @relation(fields: [unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_unit_content_unit_id")
+
+  @@index([unit_id], map: "fk_unit_content_unit_id_idx")
+}
+
+model unit_comments {
+  id         Int           @id @default(autoincrement())
+  user_id    Int
+  unit_id    Int
+  comment    String?       @db.Text
+  created_at DateTime?     @default(now()) @db.Timestamp(0)
+  deleted_at DateTime?
+  deleted_by Int?
+  unit       subject_units @relation(fields: [unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id], map: "user_id_idx")
+  @@index([unit_id], map: "unit_id_idx")
+}
+
+model assignment_benchmark_standard {
+  id                 Int                 @id @default(autoincrement())
+  assignment_id      Int
+  standard_id        Int?
+  benchmark_id       Int?
+  assignments        assignments         @relation(fields: [assignment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_assignment_strands_assignment_id")
+  subject_benchmarks subject_benchmarks? @relation(fields: [benchmark_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_assignment_strands_benchmark_id")
+  subject_standards  subject_standards?  @relation(fields: [standard_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_assignment_strands_standard_id")
+
+  @@index([assignment_id], map: "fk_assignment_strands_assignment_id_idx")
+  @@index([benchmark_id], map: "fk_assignment_strands_benchmark_id_idx")
+  @@index([standard_id], map: "fk_assignment_strands_standard_id_idx")
+}
+
+model subject_unit_benchmarks {
+  id                 Int                @id @default(autoincrement())
+  unit_id            Int
+  benchmark_id       Int
+  subject_benchmarks subject_benchmarks @relation(fields: [benchmark_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_unit_benchmarks_benchmark_id")
+  subject_units      subject_units      @relation(fields: [unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_unit_benchmarks_unit_id")
+
+  @@index([benchmark_id], map: "fk_subject_unit_benchmarks_benchmark_id_idx")
+  @@index([unit_id], map: "fk_subject_unit_benchmarks_unit_id_idx")
+}
+
+model subject_unit_standards {
+  id                Int               @id @default(autoincrement())
+  unit_id           Int
+  standard_id       Int
+  subject_standards subject_standards @relation(fields: [standard_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_unit_standards_standard_id")
+  subject_units     subject_units     @relation(fields: [unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_unit_standards_unit_id")
+
+  @@index([standard_id], map: "fk_subject_unit_standards_standard_id_idx")
+  @@index([unit_id], map: "fk_subject_unit_standards_unit_id_idx")
+}
+
+model subject_unit_strands {
+  id              Int             @id @default(autoincrement())
+  unit_id         Int
+  strand_id       Int
+  subject_strands subject_strands @relation(fields: [strand_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_unit_strands_strand_id")
+  subject_units   subject_units   @relation(fields: [unit_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_unit_strands_unit_id")
+
+  @@index([strand_id], map: "fk_subject_unit_strands_strand_id_idx")
+  @@index([unit_id], map: "fk_subject_unit_strands_unit_id_idx")
+}
+
+model system_grades {
+  id          Int      @id @default(autoincrement())
+  system_id   Int
+  grade_title String?  @db.VarChar(150)
+  grades      grades[]
+  systems     systems  @relation(fields: [system_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_system_grades_system_id")
+
+  @@index([system_id], map: "fk_system_grades_system_id_idx")
+}
+
+model systems {
+  id            Int             @id @default(autoincrement())
+  title         String          @db.VarChar(150)
+  branches      branches[]
+  system_grades system_grades[]
+}
+
+model nita_ws_courses {
+  id                                                       Int            @id @default(autoincrement())
+  course_name                                              String         @db.VarChar(100)
+  division                                                 String         @db.VarChar(100)
+  total_seats                                              Int
+  booked_seats                                             Int
+  available_seats                                          Int
+  division_key                                             String?        @db.VarChar(45)
+  nita_ws_subs_nita_ws_subs_first_choiceTonita_ws_courses  nita_ws_subs[] @relation("nita_ws_subs_first_choiceTonita_ws_courses")
+  nita_ws_subs_nita_ws_subs_second_choiceTonita_ws_courses nita_ws_subs[] @relation("nita_ws_subs_second_choiceTonita_ws_courses")
+}
+
+model nita_ws_subs {
+  id                                                          Int             @id @default(autoincrement())
+  name                                                        String          @db.VarChar(100)
+  email                                                       String          @db.VarChar(50)
+  first_choice                                                Int
+  second_choice                                               Int
+  sub_date                                                    DateTime        @default(now()) @db.DateTime(0)
+  nita_ws_courses_nita_ws_subs_first_choiceTonita_ws_courses  nita_ws_courses @relation("nita_ws_subs_first_choiceTonita_ws_courses", fields: [first_choice], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_first_choice")
+  nita_ws_courses_nita_ws_subs_second_choiceTonita_ws_courses nita_ws_courses @relation("nita_ws_subs_second_choiceTonita_ws_courses", fields: [second_choice], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_second_choice")
+
+  @@index([first_choice], map: "fk_first_choice_idx")
+  @@index([second_choice], map: "fk_second_choice_idx")
+}
+
+model turnitin_submissions {
+  id                     Int         @id @default(autoincrement())
+  student_id             Int
+  assignment_id          Int
+  turnitin_submission_id String      @db.VarChar(255)
+  created_at             DateTime?   @default(now()) @db.Timestamp(0)
+  assignments            assignments @relation(fields: [assignment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_turnitin_submissions_assignment_id")
+  students               students    @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_turnitin_submissions_student_id")
+
+  @@index([assignment_id], map: "fk_turnitin_submissions_assignment_id_idx")
+  @@index([student_id], map: "fk_turnitin_submissions_student_id_idx")
+}
+
+model devicesIII {
+  id           Int     @id @default(autoincrement())
+  device_id    String  @db.VarChar(45)
+  device_name  String? @db.VarChar(45)
+  device_token String  @db.VarChar(500)
+  parent_id    Int
+
+  @@index([parent_id], map: "fk_devices_parent_id_idx2")
+  @@ignore
+}
+
+model parentsIII {
+  id       Int     @id @default(autoincrement())
+  name     String? @db.VarChar(50)
+  password String? @db.VarChar(50)
+  email    String? @unique(map: "email_UNIQUE") @db.VarChar(255)
+
+  @@index([email], map: "idx_email")
+  @@ignore
+}
+
+model parents_notificationsII {
+  id              Int      @id @default(autoincrement())
+  parent_id       Int
+  notification_id Int
+  is_read         Boolean? @default(false)
+
+  @@index([notification_id], map: "fk_parents_notificationsII_notification_id_idx")
+  @@index([parent_id], map: "fk_parents_notificationsII_parent_id_idx")
+  @@ignore
+}
+
+model parents_studentsIII {
+  id         Int @id @default(autoincrement())
+  parent_id  Int
+  student_id Int
+
+  @@index([parent_id], map: "fk_parents_students_parent_id_idx2")
+  @@index([student_id], map: "fk_parents_students_student_id_idx")
+  @@ignore
+}
+
+model behavioral_violations {
+  id                         Int                          @id @default(autoincrement())
+  title                      String                       @db.VarChar(255)
+  points                     Int?
+  students_behaviour_records students_behaviour_records[]
+}
+
+model gamification_requests {
+  id                                                      Int                          @id @default(autoincrement())
+  requested_by                                            Int
+  reviewed_by                                             Int?
+  classroom_id                                            Int?
+  grade_id                                                Int
+  branch_id                                               Int?
+  student_id                                              Int
+  gamification_factor_id                                  Int
+  comment                                                 String?                      @db.Text
+  status                                                  gamification_requests_status @default(pending)
+  created_at                                              DateTime?                    @default(now()) @db.Timestamp(0)
+  updated_at                                              DateTime?                    @db.Timestamp(0)
+  is_deleted                                              Int?                         @default(0) @db.TinyInt
+  direct_points                                           Int?                         @default(0) @db.TinyInt
+  branches                                                branches?                    @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_branch_id_gamification_requests")
+  classrooms                                              classrooms?                  @relation(fields: [classroom_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_classroom_id_gamification")
+  employees_gamification_requests_requested_byToemployees employees                    @relation("gamification_requests_requested_byToemployees", fields: [requested_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_employee_id_gamification_requests")
+  gamification_factors                                    gamification_factors         @relation(fields: [gamification_factor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_gamification_factor_id_gamification_requests")
+  grades                                                  grades                       @relation(fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_grade_id_gamification")
+  employees_gamification_requests_reviewed_byToemployees  employees?                   @relation("gamification_requests_reviewed_byToemployees", fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reviewed_by_gamification_requests")
+  students                                                students                     @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_id_gamification_requests")
+
+  @@index([branch_id], map: "fk_branch_id_gamification_requests_idx")
+  @@index([classroom_id], map: "fk_classroom_id_gamification_idx")
+  @@index([requested_by], map: "fk_employee_id_gamification_requests_idx")
+  @@index([grade_id], map: "fk_grade_id_gamification_idx")
+  @@index([reviewed_by], map: "fk_reviewed_by_gamification_requests_idx")
+  @@index([student_id], map: "fk_student_id_gamification_requests_idx")
+  @@index([gamification_factor_id], map: "fk_gamification_factor_id_gamification_requests_idx")
+}
+
+model plans {
+  id                          Int                           @id @default(autoincrement())
+  title                       String?                       @db.VarChar(300)
+  employee_id                 Int
+  lesson_id                   Int
+  attachment                  String?                       @db.Text
+  created_at                  DateTime?                     @default(now()) @db.Timestamp(0)
+  updated_at                  DateTime?                     @db.Timestamp(0)
+  is_deleted                  Int?                          @default(0) @db.TinyInt
+  video_attachment            String?                       @db.Text
+  video_bunny_library_id      String?                       @db.VarChar(50)
+  video_bunny_video_id        String?                       @db.VarChar(100)
+  video_firebase_link         String?                       @db.VarChar(255)
+  video_bunny_collection_id   String?                       @db.VarChar(255)
+  video_time                  Int?
+  employees                   employees                     @relation(fields: [employee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_plans_employee_id")
+  lessons                     lessons                       @relation(fields: [lesson_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_plans_lesson_id")
+  plans_reviews               plans_reviews[]
+  teachers_questions_sections teachers_questions_sections[]
+
+  @@index([employee_id], map: "fk_plans_employee_id_idx")
+  @@index([lesson_id], map: "fk_plans_lesson_id_idx")
+}
+
+model question_subject_standards {
+  id                Int               @id @default(autoincrement())
+  question_id       Int
+  standard_id       Int
+  is_deleted        Boolean?          @default(false)
+  deleted_at        DateTime?         @db.Timestamp(0)
+  created_at        DateTime?         @default(now()) @db.Timestamp(0)
+  updated_at        DateTime?         @default(now()) @db.Timestamp(0)
+  questions         questions         @relation(fields: [question_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_question_subject_standards_question_id")
+  subject_standards subject_standards @relation(fields: [standard_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_question_subject_standards_standard_id")
+
+  @@index([question_id], map: "fk_question_subject_standards_question_id_idx")
+  @@index([standard_id], map: "fk_question_subject_standards_standard_id_idx")
+}
+
+model gamification_factors {
+  id                    Int                     @id @default(autoincrement())
+  action                String                  @db.VarChar(255)
+  points                Int
+  gamification_requests gamification_requests[]
+}
+
+model ai_assistants {
+  id             Int        @id @default(autoincrement())
+  name           String     @db.VarChar(255)
+  description    String?    @db.Text
+  openai_id      String     @unique @db.VarChar(255)
+  grade_id       Int?       @unique
+  is_for_parents Boolean    @default(false)
+  created_at     DateTime   @default(now()) @db.DateTime(6)
+  updated_at     DateTime   @default(now()) @db.DateTime(6)
+  grade          grades?    @relation(fields: [grade_id], references: [id], onDelete: Cascade)
+  ai_chats       ai_chats[]
+}
+
+model ai_chat_messages {
+  id         Int         @id @default(autoincrement())
+  chat_id    Int
+  content    String      @db.Text
+  role       MessageRole
+  created_at DateTime    @default(now()) @db.DateTime(6)
+  chat       ai_chats    @relation(fields: [chat_id], references: [id], onDelete: Cascade)
+
+  @@index([chat_id], map: "ai_chat_messages_chat_id_fkey")
+}
+
+model ai_chats {
+  id               Int                @id @default(autoincrement())
+  assistant_id     Int
+  student_id       Int?               @unique
+  parent_id        Int?               @unique
+  user_type        UserType
+  openai_thread_id String?            @unique @db.VarChar(255)
+  expires_at       DateTime?          @db.DateTime(6)
+  created_at       DateTime           @default(now()) @db.DateTime(6)
+  updated_at       DateTime           @default(now()) @db.DateTime(6)
+  ai_chat_messages ai_chat_messages[]
+  ai_assistant     ai_assistants      @relation(fields: [assistant_id], references: [id], onDelete: Cascade)
+  parent           parents?           @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  student          students?          @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@index([assistant_id], map: "ai_chats_assistant_id_fkey")
+}
+
+model lessons_reports_details {
+  id                          Int                                 @id @default(autoincrement())
+  students_lessons_reports_id Int
+  refrance_id                 Int
+  value_type                  lessons_reports_details_value_type?
+  value                       Int?
+  max_value                   Int?
+  created_at                  DateTime?                           @db.Timestamp(0)
+  status                      lessons_reports_details_status?
+  assignments                 assignments                         @relation(fields: [refrance_id], references: [id], onDelete: Cascade, map: "fk_lessons_reports_details_assignment_id")
+  students_lessons_reports    students_lessons_reports            @relation(fields: [students_lessons_reports_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lessons_reports_details_students_lessons_reports_id")
+
+  @@index([refrance_id], map: "fk_lessons_reports_details_assignment_id_idx")
+  @@index([students_lessons_reports_id], map: "fk_lessons_reports_details_students_lessons_reports_id_idx")
+}
+
+model students_lessons_reports {
+  id                      Int                       @id @default(autoincrement())
+  report_id               Int
+  student_id              Int
+  subject_id              Int
+  lesson_id               Int?
+  lesson_title            String?                   @db.VarChar(255)
+  lessons_reports_details lessons_reports_details[]
+  lessons                 lessons?                  @relation(fields: [lesson_id], references: [id], onDelete: Cascade, map: "fk_student_lessons_reports_lesson_id")
+  students_weekly_reports students_weekly_reports   @relation(fields: [report_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_lessons_reports_report_id")
+  students                students                  @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_lessons_reports_student_id")
+  subjects                subjects                  @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_lessons_reports_subject_id")
+
+  @@index([lesson_id], map: "fk_student_lessons_reports_lesson_id_idx")
+  @@index([report_id], map: "fk_student_lessons_reports_report_id_idx")
+  @@index([student_id], map: "fk_student_lessons_reports_student_id_idx")
+  @@index([subject_id], map: "fk_student_lessons_reports_subject_id_idx")
+}
+
+model students_weekly_reports {
+  id                                                 Int                                 @id @default(autoincrement())
+  title                                              String?                             @db.VarChar(255)
+  student_id                                         Int
+  father_id                                          Int?
+  mother_id                                          Int?
+  start_date                                         DateTime?                           @db.Timestamp(0)
+  end_date                                           DateTime?                           @db.Timestamp(0)
+  students_lessons_reports                           students_lessons_reports[]
+  parents_students_weekly_reports_father_idToparents parents?                            @relation("students_weekly_reports_father_idToparents", fields: [father_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_students_weekly_reports_father_id")
+  parents_students_weekly_reports_mother_idToparents parents?                            @relation("students_weekly_reports_mother_idToparents", fields: [mother_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_students_weekly_reports_mother_id")
+  students                                           students                            @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_students_weekly_reports_student_id")
+  students_weekly_reports_ai_summary                 students_weekly_reports_ai_summary?
+
+  @@index([mother_id], map: "fk_students_weekly_reports_mother_id_idx")
+  @@index([father_id], map: "fk_students_weekly_reports_parent_id_idx")
+  @@index([student_id], map: "fk_students_weekly_reports_student_id_idx")
+}
+
+model students_weekly_reports_ai_summary {
+  id                      Int                     @id @default(autoincrement())
+  report_id               Int                     @unique
+  summary                 String?                 @db.Text
+  created_at              DateTime?               @default(now()) @db.Timestamp(0)
+  updated_at              DateTime?               @db.Timestamp(0)
+  students_weekly_reports students_weekly_reports @relation(fields: [report_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_students_weekly_reports_ai_summary_report_id")
+
+  @@index([report_id], map: "fk_students_weekly_reports_ai_summary_report_id_idx")
+}
+
+model refresh_tokens {
+  id         Int      @id @default(autoincrement())
+  token      String   @db.Char(64)
+  user_id    Int
+  user_type  String   @db.VarChar(50)
+  expires_at DateTime @db.Timestamp(0)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  is_revoked Boolean  @default(false)
+
+  @@index([user_id, user_type], map: "idx_user_refresh_tokens")
+  @@index([expires_at], map: "idx_refresh_token_expires")
+  @@index([token], map: "idx_refresh_token_hash")
+}
+
+model survey {
+  id               Int                     @id @default(autoincrement())
+  title            String?                 @db.VarChar(250)
+  type             String?                 @db.VarChar(250)
+  description      String?                 @db.VarChar(250)
+  created_at       DateTime?               @default(now()) @db.Timestamp(0)
+  is_deleted       Int?                    @default(0) @db.TinyInt
+  is_active        Int?                    @default(1) @db.TinyInt
+  target_audience  survey_target_audience?
+  survey_branch    survey_branch[]
+  survey_questions survey_questions[]
+}
+
+model survey_answers {
+  id               Int               @id @default(autoincrement())
+  question_id      Int?
+  response_id      Int?
+  answer_text      String?           @db.Text
+  answer_number    Int?
+  survey_questions survey_questions? @relation(fields: [question_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_survey_answers_question_id")
+  survey_responses survey_responses? @relation(fields: [response_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_survey_answers_response_id")
+
+  @@index([question_id], map: "fk_survey_answers_question_id_idx")
+  @@index([response_id], map: "fk_survey_answers_response_id_idx")
+}
+
+model survey_questions {
+  id               Int                    @id @default(autoincrement())
+  survey_id        Int
+  question_text_en String?                @db.Text
+  question_text_ar String?                @db.Text
+  type             survey_questions_type?
+  min_value        Int?
+  max_value        Int?
+  survey_answers   survey_answers[]
+  survey           survey                 @relation(fields: [survey_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_survey_question_survey_id")
+
+  @@index([survey_id], map: "fk_survey_question_survey_id_idx")
+}
+
+model survey_responses {
+  id             Int                              @id @default(autoincrement())
+  survey_id      Int?
+  created_at     DateTime?                        @default(now()) @db.Timestamp(0)
+  responder_id   Int?
+  responder_type survey_responses_responder_type?
+  survey_answers survey_answers[]
+}
+
+model survey_branch {
+  id        Int      @id @default(autoincrement())
+  survey_id Int
+  branch_id Int
+  is_active Int?     @default(0) @db.TinyInt
+  branches  branches @relation(fields: [branch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_survey_branch_branch_id")
+  survey    survey   @relation(fields: [survey_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_survey_branch_survey_id")
+
+  @@index([branch_id], map: "fk_survey_branch_branch_id_idx")
+  @@index([survey_id], map: "fk_survey_branch_survey_id_idx")
+}
+
+model students_notifications {
+  id              Int           @id @default(autoincrement())
+  student_id      Int
+  notification_id Int
+  notifications   notifications @relation(fields: [notification_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_students_notifications_notification_id")
+  students        students      @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_students_notifications_student_id")
+
+  @@index([notification_id], map: "fk_students_notifications_notification_id_idx")
+  @@index([student_id], map: "fk_students_notifications_student_id_idx")
+}
+
+model lesson_resource_sections {
+  id                  Int                   @id @default(autoincrement())
+  lesson_resource_id  Int
+  assignment_id       Int
+  timestamp           Int?
+  page                Int?
+  max_attempts        Int
+  grade               Decimal?              @default(0.000) @db.Decimal(6, 3)
+  assignments         assignments           @relation(fields: [assignment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_lesson_resource_sections_assignment_id")
+  lesson_resources    lesson_resources      @relation(fields: [lesson_resource_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_lesson_resource_sections_resource")
+  sections_questions  sections_questions[]
+  submissions_details submissions_details[]
+
+  @@index([assignment_id], map: "fk_lesson_resource_sections_assignment_id_idx")
+  @@index([lesson_resource_id], map: "fk_lesson_resource_sections_resource_idx")
+}
+
+model lesson_resources_submissions {
+  id                 Int              @id @default(autoincrement())
+  student_id         Int
+  lesson_resource_id Int
+  total_attempts     Int
+  spent_time         Int
+  lesson_resources   lesson_resources @relation(fields: [lesson_resource_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_lesson_resources_submissions_lesson_resource_id")
+  students           students         @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_lesson_resources_submissions_student_id")
+
+  @@index([lesson_resource_id], map: "fk_lesson_resources_submissions_lesson_resource_id_idx")
+  @@index([student_id], map: "fk_lesson_resources_submissions_student_id_idx")
+}
+
+model sections_questions {
+  id            Int                      @id @default(autoincrement())
+  section_id    Int
+  assignment_id Int
+  question_id   Int
+  duration      Int?
+  assignments   assignments              @relation(fields: [assignment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sections_questions_assignment_id")
+  questions     questions                @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sections_questions_question_id")
+  sections      lesson_resource_sections @relation(fields: [section_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sections_questions_section_id")
+
+  @@index([assignment_id], map: "fk_sections_questions_assignment_id_idx")
+  @@index([question_id], map: "fk_sections_questions_question_id_idx")
+  @@index([section_id], map: "fk_sections_questions_section_id_idx")
+}
+
+model feature_flags {
+  id                          Int                           @id @default(autoincrement())
+  key                         String                        @unique(map: "key") @db.VarChar(255)
+  description                 String?                       @db.Text
+  group                       String?                       @db.VarChar(255)
+  category                    String?                       @db.VarChar(255)
+  enabled                     Boolean?                      @default(false)
+  protected                   Boolean?                      @default(false)
+  createdAt                   DateTime?                     @default(now())
+  updatedAt                   DateTime?                     @default(now())
+  user_feature_flag_overrides user_feature_flag_overrides[]
+
+  @@index([category], map: "idx__feature_flags_category")
+  @@index([enabled], map: "idx__feature_flags_enabled")
+  @@map("_feature_flags")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model temp_parents {
+  id            Int               @default(0)
+  name          String?           @db.VarChar(255)
+  mobile        String?           @db.VarChar(100)
+  email         String?           @db.VarChar(100)
+  degree        String?           @db.VarChar(300)
+  company       String?           @db.VarChar(100)
+  occupation    String?           @db.VarChar(300)
+  national_id   String?           @db.VarChar(50)
+  type          temp_parents_type
+  first_name    String?           @db.VarChar(100)
+  last_name     String?           @db.VarChar(100)
+  password      String?           @db.VarChar(45)
+  klickit_flag  Int?              @default(0) @db.TinyInt
+  token_version Int?              @default(0)
+
+  @@map("_temp_parents")
+  @@ignore
+}
+
+model user_feature_flag_overrides {
+  id            Int           @id @default(autoincrement())
+  userId        String        @db.VarChar(255)
+  flagKey       String        @db.VarChar(255)
+  enabled       Boolean
+  createdAt     DateTime?     @default(now())
+  updatedAt     DateTime?     @default(now())
+  feature_flags feature_flags @relation(fields: [flagKey], references: [key], onDelete: Cascade, onUpdate: NoAction, map: "_user_feature_flag_overrides_ibfk_1")
+
+  @@unique([userId, flagKey], map: "unique_user_flag")
+  @@index([flagKey], map: "idx__user_feature_flag_overrides_flagKey")
+  @@index([userId], map: "idx__user_feature_flag_overrides_userId")
+  @@map("_user_feature_flag_overrides")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model parents_backup {
+  id          Int                 @default(0)
+  name        String?             @db.VarChar(255)
+  mobile      String?             @db.VarChar(100)
+  email       String?             @db.VarChar(100)
+  degree      String?             @db.VarChar(300)
+  company     String?             @db.VarChar(100)
+  occupation  String?             @db.VarChar(300)
+  national_id String?             @db.VarChar(50)
+  type        parents_backup_type
+  first_name  String?             @db.VarChar(100)
+  last_name   String?             @db.VarChar(100)
+  password    String?             @db.VarChar(45)
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model parents_students_backup {
+  id         Int @default(0)
+  student_id Int
+  parent_id  Int
+
+  @@ignore
+}
+
+model teachers_questions {
+  id                          Int                          @id @default(autoincrement())
+  section_id                  Int?
+  title                       String?                      @db.VarChar(500)
+  time_limit                  Int?
+  text                        String?                      @db.Text
+  attachment                  String?                      @db.Text
+  type                        teachers_questions_type?
+  is_deleted                  Boolean?                     @default(false)
+  created_at                  DateTime?                    @db.Timestamp(0)
+  updated_at                  DateTime?                    @db.Timestamp(0)
+  teachers_questions_sections teachers_questions_sections? @relation(fields: [section_id], references: [id], onDelete: Cascade, map: "fk_teachers_questions_section_id")
+  teachers_questions_options  teachers_questions_options[]
+  teachers_submissions        teachers_submissions[]
+
+  @@index([section_id], map: "fk_teachers_questions_section_id_idx")
+}
+
+model teachers_questions_options {
+  id                   Int                    @id @default(autoincrement())
+  teacher_question_id  Int?
+  text                 String?                @db.Text
+  is_correct           Boolean?
+  teachers_questions   teachers_questions?    @relation(fields: [teacher_question_id], references: [id], onDelete: Cascade, map: "fk_teachers_questions_options_question_id")
+  teachers_submissions teachers_submissions[]
+
+  @@index([teacher_question_id], map: "fk_teachers_questions_options_question_id_idx")
+}
+
+model teachers_questions_sections {
+  id                   Int                    @id @default(autoincrement())
+  plan_id              Int?
+  timestamp            Int?
+  page                 Int?
+  max_attempts         Int?
+  grade                Float?                 @db.Float
+  created_by           Int?
+  teachers_questions   teachers_questions[]
+  employees            employees?             @relation(fields: [created_by], references: [id], onDelete: Cascade, map: "fk_teachers_questions_sections_employee_id")
+  plans                plans?                 @relation(fields: [plan_id], references: [id], onDelete: Cascade, map: "fk_teachers_questions_sections_plan_id")
+  teachers_submissions teachers_submissions[]
+
+  @@index([created_by], map: "fk_teachers_questions_sections_employee_id_idx")
+  @@index([plan_id], map: "fk_teachers_questions_sections_plan_id_idx")
+}
+
+model teachers_submissions {
+  id                          Int                          @id @default(autoincrement())
+  teacher_id                  Int?
+  question_id                 Int?
+  option_id                   Int?
+  section_id                  Int?
+  correct                     Boolean?                     @default(false)
+  feedback                    String?                      @db.Text
+  status                      teachers_submissions_status?
+  created_at                  DateTime?                    @db.Timestamp(0)
+  updated_at                  DateTime?                    @db.Timestamp(0)
+  grade                       Float?                       @db.Float
+  teachers_questions_options  teachers_questions_options?  @relation(fields: [option_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_teachers_submissions_option_id")
+  teachers_questions          teachers_questions?          @relation(fields: [question_id], references: [id], onDelete: Cascade, map: "fk_teachers_submissions_question_id")
+  teachers_questions_sections teachers_questions_sections? @relation(fields: [section_id], references: [id], onDelete: Cascade, map: "fk_teachers_submissions_section_id")
+  employees                   employees?                   @relation(fields: [teacher_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_teachers_submissions_teacher_id")
+
+  @@index([option_id], map: "fk_teachers_submissions_option_id")
+  @@index([question_id], map: "fk_teachers_submissions_question_id_idx")
+  @@index([section_id], map: "fk_teachers_submissions_section_id_idx")
+  @@index([teacher_id], map: "fk_teachers_submissions_teacher_id_idx")
+}
+
+model plans_reviews {
+  id          Int       @id @default(autoincrement())
+  plan_id     Int
+  reviewer_id Int
+  comment     String?   @db.Text
+  like        Boolean?
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+  is_deleted  Boolean?  @default(false)
+  plans       plans     @relation(fields: [plan_id], references: [id], onDelete: Cascade, map: "fk_plans_reviews_plan_id")
+  employees   employees @relation(fields: [reviewer_id], references: [id], onDelete: Cascade, map: "fk_plans_reviews_reviewer_id")
+
+  @@index([plan_id], map: "fk_plans_reviews_plan_id_idx")
+  @@index([reviewer_id], map: "fk_plans_reviews_reviewer_id_idx")
+}
+
+model video_transfers {
+  id                  Int      @id @default(autoincrement())
+  idempotency_key     String   @unique @db.VarChar(255)
+  entity_type         String   @db.VarChar(50)
+  entity_id           Int
+  firebase_link       String   @db.VarChar(512)
+  title               String?  @db.VarChar(255)
+  status              String   @default("pending") @db.VarChar(50)
+  bunny_library_id    String?  @db.VarChar(50)
+  bunny_video_id      String?  @db.VarChar(100)
+  bunny_status        Int?
+  bunny_embed_url     String?  @db.VarChar(512)
+  error_message       String?  @db.Text
+  created_at          DateTime @default(now()) @db.DateTime(0)
+  updated_at          DateTime @default(now()) @db.DateTime(0)
+  bunny_collection_id String?  @db.VarChar(255)
+
+  @@index([bunny_video_id])
+  @@index([entity_type, entity_id], map: "video_transfers_entity_idx")
+}
+
+model video_webhook_events {
+  id              Int      @id @default(autoincrement())
+  idempotency_key String   @unique @db.VarChar(255)
+  source          String   @db.VarChar(50)
+  video_guid      String?  @db.VarChar(100)
+  status          Int?
+  payload         Json?
+  created_at      DateTime @default(now()) @db.DateTime(0)
+
+  @@index([video_guid])
+}
+
+enum requests_request_status {
+  accept
+  reject
+  pending
+}
+
+enum announcements_type {
+  nis
+  branch
+  grade
+}
+
+enum lesson_plan_logs_new_status {
+  not_started
+  in_progress
+  paused
+  completed
+  canceled
+}
+
+enum lesson_plan_logs_previous_status {
+  not_started
+  in_progress
+  paused
+  completed
+  canceled
+}
+
+enum lesson_plan_classroom_current_status {
+  not_started
+  in_progress
+  paused
+  completed
+  canceled
+}
+
+enum unit_content_type {
+  lesson_objective
+  essential_questions
+  enduring_understanding
+  additional_activity
+  cross_curriculum
+  comment
+}
+
+enum lesson_plan_details_type {
+  Assignment
+  Blended
+  Resources
+  In_class_Activity
+}
+
+enum parents_type {
+  father
+  mother
+}
+
+enum students_behaviour_records_status {
+  pending
+  consequences_applied
+  points_deducted
+}
+
+enum gamification_requests_status {
+  pending
+  accepted
+  rejected
+  direct_points
+}
+
+enum UserType {
+  STUDENT
+  PARENT
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum lessons_reports_details_value_type {
+  assignment
+  attendance
+  quiz
+}
+
+enum lessons_reports_details_status {
+  submitted
+  not_submitted
+  not_graded
+}
+
+enum survey_questions_type {
+  rating
+  text
+  number
+  custom
+}
+
+enum survey_responses_responder_type {
+  parent
+  student
+  educator
+}
+
+enum survey_target_audience {
+  parent
+  student
+  educator
+}
+
+enum temp_parents_type {
+  father
+  mother
+
+  @@map("_temp_parents_type")
+}
+
+enum parents_backup_type {
+  father
+  mother
+}
+
+enum teachers_questions_type {
+  MCQ
+  T_F @map("T/F")
+}
+
+enum teachers_submissions_status {
+  started
+  completed
+  closed
+}

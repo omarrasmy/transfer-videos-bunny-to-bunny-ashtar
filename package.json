@@ -1,0 +1,26 @@
+{
+  "name": "transfer-bunny-lib",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Migrate Bunny Stream videos between libraries (server-side fetch), driven by the blb.activities table, with a DB-backed queue and a live dashboard.",
+  "scripts": {
+    "migrate": "tsx src/index.ts migrate",
+    "scan": "tsx src/index.ts scan",
+    "simulate": "tsx src/index.ts simulate",
+    "run": "tsx src/index.ts run",
+    "serve": "tsx src/index.ts serve",
+    "test-one": "tsx src/index.ts test-one",
+    "delete-phase": "tsx src/index.ts delete-phase",
+    "stats": "tsx src/index.ts stats"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "mysql2": "^3.22.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

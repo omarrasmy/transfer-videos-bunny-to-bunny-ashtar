@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bunny Transfer Queue</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --line:#2d333b; --fg:#e6edf3; --mut:#8b949e;
+    --blue:#388bfd; --green:#3fb950; --amber:#d29922; --red:#f85149; --purple:#a371f7; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 ui-sans-serif,system-ui,Segoe UI,Roboto,Arial; }
+  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+  h1 { font-size:16px; margin:0; font-weight:650; }
+  .pill { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--mut); }
+  .pill.on { color:#fff; border-color:transparent; }
+  .pill.live { background:var(--green); } .pill.db { background:var(--blue); } .pill.del { background:var(--red); }
+  .pill.sim { background:var(--amber); color:#000; }
+  main { padding:18px 20px; display:grid; gap:18px; max-width:1400px; margin:0 auto; }
+  .bar { height:22px; border-radius:6px; background:var(--panel2); overflow:hidden; display:flex; }
+  .bar > span { display:block; height:100%; }
+  .seg-done{background:var(--green);} .seg-active{background:var(--blue);} .seg-failed{background:var(--red);}
+  .seg-skipped{background:#6e7681;} .seg-pending{background:#30363d;}
+  .stats { display:flex; gap:10px; flex-wrap:wrap; }
+  .stat { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 14px; min-width:90px; }
+  .stat .n { font-size:22px; font-weight:700; } .stat .l { font-size:11px; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
+  .wk { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px; min-height:78px; }
+  .wk .hd { display:flex; justify-content:space-between; color:var(--mut); font-size:11px; }
+  .wk .ph { font-weight:600; font-size:12px; margin-top:4px; }
+  .wk.idle { opacity:.5; } .wk .ttl { font-size:12px; color:var(--fg); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .wk .gd { font-family:ui-monospace,monospace; font-size:10px; color:var(--mut); }
+  section h2 { font-size:13px; color:var(--mut); margin:0 0 8px; text-transform:uppercase; letter-spacing:.05em; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th,td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--mut); font-weight:600; font-size:11px; }
+  td.ttl { max-width:340px; overflow:hidden; text-overflow:ellipsis; }
+  .mono { font-family:ui-monospace,monospace; font-size:11px; color:var(--mut); }
+  .st { font-size:11px; padding:1px 7px; border-radius:999px; font-weight:600; }
+  .st.done{background:rgba(63,185,80,.18);color:var(--green);} .st.failed{background:rgba(248,81,73,.18);color:var(--red);}
+  .st.skipped{background:rgba(110,118,129,.25);color:#adbac7;} .st.pending{background:rgba(48,54,61,.6);color:#adbac7;}
+  .st.transcoding,.st.fetching,.st.resolving,.st.verifying,.st.updating_db,.st.deleting,.st.claimed{background:rgba(56,139,253,.18);color:var(--blue);}
+  .prog { width:90px; height:7px; background:var(--panel2); border-radius:4px; overflow:hidden; display:inline-block; vertical-align:middle; }
+  .prog > i { display:block; height:100%; background:var(--blue); }
+  #logs { background:#0a0e14; border:1px solid var(--line); border-radius:8px; padding:10px; height:260px; overflow:auto; font-family:ui-monospace,monospace; font-size:11.5px; }
+  .lg { padding:1px 0; } .lg.warn{color:var(--amber);} .lg.error{color:var(--red);} .lg .t{color:#586069;}
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:18px; } @media(max-width:1000px){ .cols{grid-template-columns:1fr;} }
+  .muted{color:var(--mut);}
+</style>
+</head>
+<body>
+<header>
+  <h1>🐰 Bunny Transfer Queue</h1>
+  <span id="flags"></span>
+  <span class="muted" id="meta" style="margin-left:auto;font-size:12px"></span>
+</header>
+<main>
+  <div>
+    <div class="bar" id="bar"></div>
+    <div class="stats" id="stats" style="margin-top:10px"></div>
+  </div>
+  <section>
+    <h2>Workers</h2>
+    <div class="grid" id="workers"></div>
+  </section>
+  <section>
+    <h2>Active transfers</h2>
+    <table id="activeT"><thead><tr>
+      <th>job</th><th>title</th><th>src lib</th><th>state</th><th>dest</th><th>progress</th><th>size</th><th>try</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+  <div class="cols">
+    <section>
+      <h2>Recent jobs</h2>
+      <table id="recentT"><thead><tr>
+        <th>job</th><th>title</th><th>state</th><th>rows</th><th>error</th>
+      </tr></thead><tbody></tbody></table>
+    </section>
+    <section>
+      <h2>Log</h2>
+      <div id="logs"></div>
+    </section>
+  </div>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => (s==null?'':String(s)).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const fmtBytes = (b) => { if(!b) return ''; const u=['B','KB','MB','GB']; let i=0,n=b; while(n>=1024&&i<3){n/=1024;i++;} return n.toFixed(1)+u[i]; };
+const ago = (t) => { const s=Math.floor((Date.now()-new Date(t))/1000); if(s<60)return s+'s'; if(s<3600)return Math.floor(s/60)+'m'; return Math.floor(s/3600)+'h'; };
+let STATUS = {};
+
+function renderFlags(c){
+  const f=[];
+  f.push(`<span class="pill ${c.live?'on live':''}">${c.live?'LIVE':'SIMULATION'}</span>`);
+  if(!c.live) f[0]=`<span class="pill on sim">SIMULATION</span>`;
+  f.push(`<span class="pill ${c.enableDbUpdate?'on db':''}">DB update ${c.enableDbUpdate?'ON':'off'}</span>`);
+  f.push(`<span class="pill ${c.enableSourceDelete?'on del':''}">delete ${c.enableSourceDelete?'ON':'off'}</span>`);
+  $('#flags').innerHTML = f.join(' ');
+  $('#meta').textContent = `teachers ${c.teachers.join(',')} → lib ${c.destLibrary} · sources ${c.sourceLibraries.join(',')} · ${c.concurrency} workers`;
+}
+function renderBar(t){
+  const total=t.total||1;
+  const active=(t.claimed||0)+(t.resolving||0)+(t.fetching||0)+(t.transcoding||0)+(t.verifying||0)+(t.updating_db||0)+(t.deleting||0);
+  const seg=(cls,n)=>n?`<span class="${cls}" style="width:${(n/total*100).toFixed(2)}%"></span>`:'';
+  $('#bar').innerHTML = seg('seg-done',t.done)+seg('seg-active',active)+seg('seg-failed',t.failed)+seg('seg-skipped',t.skipped)+seg('seg-pending',t.pending);
+}
+function renderStats(t){
+  const order=[['done','done'],['transcoding','transcoding'],['pending','pending'],['failed','failed'],['skipped','skipped'],['total','total']];
+  $('#stats').innerHTML = order.map(([k,l])=>`<div class="stat"><div class="n">${t[k]||0}</div><div class="l">${l}</div></div>`).join('');
+}
+function renderWorkers(ws){
+  $('#workers').innerHTML = ws.map(w=>{
+    const idle = w.phase!=='processing';
+    return `<div class="wk ${idle?'idle':''}">
+      <div class="hd"><span>worker ${w.id}</span><span>${w.phase==='processing'?ago(w.since)+' ago':w.phase}</span></div>
+      <div class="ph">${esc(w.phase)}</div>
+      <div class="ttl">${esc(w.title)||'<span class="muted">—</span>'}</div>
+      <div class="gd">${esc(w.guid)||''}</div>
+    </div>`;
+  }).join('');
+}
+function stName(n){ return STATUS.statusNames && STATUS.statusNames[n]!=null ? STATUS.statusNames[n] : (n==null?'':n); }
+function jobRowActive(j){
+  return `<tr>
+    <td class="mono">#${j.id}</td>
+    <td class="ttl">${esc(j.title)}</td>
+    <td>${j.source_library_id}</td>
+    <td><span class="st ${j.state}">${j.state}</span></td>
+    <td class="muted">${esc(stName(j.dest_status))}</td>
+    <td><span class="prog"><i style="width:${j.encode_progress||0}%"></i></span> ${j.encode_progress||0}%</td>
+    <td class="muted">${fmtBytes(j.size_bytes)}</td>
+    <td class="muted">${j.attempts}</td>
+  </tr>`;
+}
+function jobRowRecent(j){
+  return `<tr>
+    <td class="mono">#${j.id}</td>
+    <td class="ttl">${esc(j.title)}</td>
+    <td><span class="st ${j.state}">${j.state}</span></td>
+    <td class="muted">${j.activity_updated_count}/${j.activity_count}</td>
+    <td class="muted ttl" title="${esc(j.error)}">${esc(j.error)||''}</td>
+  </tr>`;
+}
+function renderLogs(logs){
+  $('#logs').innerHTML = logs.slice().reverse().map(l=>{
+    const t=new Date(l.created_at).toLocaleTimeString();
+    const tag=l.job_id?'#'+l.job_id:(l.source_video_guid?l.source_video_guid.slice(0,8):'-');
+    return `<div class="lg ${l.level}"><span class="t">${t}</span> [${tag}] <b>${esc(l.event)||''}</b> ${esc(l.message)}</div>`;
+  }).join('');
+}
+async function tick(){
+  try {
+    const r = await fetch('/api/status'); STATUS = await r.json();
+    renderFlags(STATUS.config); renderBar(STATUS.totals); renderStats(STATUS.totals);
+    renderWorkers(STATUS.workers||[]);
+    $('#activeT tbody').innerHTML = (STATUS.active||[]).map(jobRowActive).join('') || '<tr><td colspan="8" class="muted">none</td></tr>';
+    $('#recentT tbody').innerHTML = (STATUS.recent||[]).map(jobRowRecent).join('');
+    renderLogs(STATUS.logs||[]);
+  } catch(e){ /* keep last view */ }
+}
+tick(); setInterval(tick, 2000);
+</script>
+</body>
+</html>
