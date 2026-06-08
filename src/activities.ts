@@ -68,6 +68,21 @@ export async function updateActivitiesForJob(job: JobRow, newGuid: string): Prom
   return { attempted: pendingIds.length, updated: verifiedIds.size, alreadyDone };
 }
 
+/**
+ * Best-effort trace-table sync: repoint blb.bunny_videos (the upload/where-is-it registry) to the
+ * new destination so it doesn't keep pointing at a soon-to-be-deleted source library. Guarded by
+ * the old (guid, library); not part of any delete gate.
+ */
+export async function syncBunnyVideosTrace(job: JobRow, newGuid: string): Promise<number> {
+  const dest = config.dest;
+  const res = await blbExec(
+    `UPDATE bunny_videos SET library_id = ?, bunny_video_id = ?, bunny_guid = ?, bunny_collection_id = ?
+      WHERE bunny_video_id = ? AND library_id = ?`,
+    [String(dest.id), newGuid, newGuid, dest.collectionId, job.source_video_guid, String(job.source_library_id)],
+  );
+  return res.affectedRows;
+}
+
 /** Total activity rows updated for a job (for reporting). */
 export async function updatedCountForJob(jobId: number): Promise<number> {
   const rows = await tQuery<(RowDataPacket & { n: number })[]>(

@@ -1,8 +1,8 @@
 import { config, sourceCreds } from './config.js';
 import { getVideo, fetchVideo, deleteVideo, resolveSourceUrl, verifyWatchable, updateVideoTitle, findVideosByTitleContains } from './bunny.js';
 import { setState, updateJob } from './jobs.js';
-import { updateActivitiesForJob, updatedCountForJob, pendingMapCount } from './activities.js';
-import { updateSecondDbForJob, secondDbUpdatedCount, pendingSecondDbMapCount } from './seconddb.js';
+import { updateActivitiesForJob, updatedCountForJob, pendingMapCount, syncBunnyVideosTrace } from './activities.js';
+import { updateSecondDbForJob, secondDbUpdatedCount, pendingSecondDbMapCount, syncVideoTransfersTrace } from './seconddb.js';
 import { log } from './logger.js';
 import type { JobRow } from './types.js';
 
@@ -149,6 +149,8 @@ export async function processJob(job: JobRow, ctx: WorkerCtx): Promise<void> {
     const total = await updatedCountForJob(job.id);
     await updateJob(job.id, { db_updated_at: new Date(), activity_updated_count: total });
     await log.info(`db updated: ${r.updated}/${r.attempted} now -> ${newGuid} (total ${total}/${job.activity_count})`, { ...tag, event: 'db_update', data: r });
+    try { const bv = await syncBunnyVideosTrace(job, newGuid); if (bv) await log.info(`bunny_videos trace synced (${bv})`, { ...tag, event: 'trace1' }); }
+    catch (e) { await log.warn(`bunny_videos trace sync failed: ${(e as Error).message}`, { ...tag, event: 'trace1_fail' }); }
   } else {
     await log.warn('db update disabled (ENABLE_DB_UPDATE=false)', { ...tag, event: 'db_skip' });
   }
@@ -221,6 +223,8 @@ export async function processJob(job: JobRow, ctx: WorkerCtx): Promise<void> {
       const tot2 = await secondDbUpdatedCount(job.id);
       await updateJob(job.id, { second_db_updated_at: new Date(), second_db_rows_updated: tot2 });
       await log.info(`second-DB updated: ${r2.updated}/${r2.attempted} -> ${newGuid2} (total ${tot2}/${job.second_db_row_count})`, { ...tag, event: 'db_update2', data: r2 });
+      try { const vt = await syncVideoTransfersTrace(job, newGuid2); if (vt) await log.info(`video_transfers trace synced (${vt})`, { ...tag, event: 'trace2' }); }
+      catch (e) { await log.warn(`video_transfers trace sync failed: ${(e as Error).message}`, { ...tag, event: 'trace2_fail' }); }
     } else {
       await log.warn('leg2 db update disabled (ENABLE_DB_UPDATE=false)', { ...tag, event: 'db_skip2' });
     }

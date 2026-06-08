@@ -70,6 +70,20 @@ export async function populateSecondDbMap(jobByLibGuid: Map<string, number>): Pr
   return { jobsFlagged: perJob.size, rowsMapped };
 }
 
+/**
+ * Best-effort trace-table sync on the 2nd-DB server: repoint video_transfers (the firebase->bunny
+ * upload registry) to the leg-2 destination (673029). Guarded by the old (guid, library); not a delete gate.
+ */
+export async function syncVideoTransfersTrace(job: JobRow, newGuid2: string): Promise<number> {
+  const dest2 = config.dest2;
+  const res = await secondExec(
+    `UPDATE video_transfers SET bunny_library_id = ?, bunny_video_id = ?, bunny_collection_id = ?
+      WHERE bunny_video_id = ? AND bunny_library_id = ?`,
+    [String(dest2.id), newGuid2, dest2.collectionId, job.source_video_guid, String(job.source_library_id)],
+  );
+  return res.affectedRows;
+}
+
 export async function pendingSecondDbMapCount(jobId: number): Promise<number> {
   const rows = await tQuery<(RowDataPacket & { n: number })[]>(
     `SELECT COUNT(*) n FROM bunny_transfer_seconddb_map WHERE job_id = ? AND status <> 'updated'`,
