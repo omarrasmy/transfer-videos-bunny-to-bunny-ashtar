@@ -63,13 +63,18 @@ export async function claimNext(workerId: number): Promise<JobRow | null> {
   return null;
 }
 
-/** On startup, return any jobs stuck in an active state (from a previous crash) to a resumable state. */
+/**
+ * On startup, return any jobs stuck in an active state (from a previous crash) to 'pending' so
+ * claimNext can pick them up. The worker resumes correctly via the new_video_guid check (it skips
+ * re-fetch when a destination video already exists and just polls). attempts is reset because an
+ * interrupted job was not a genuine failure. (Must be 'pending', NOT 'transcoding' — claimNext only
+ * claims pending/failed, so a 'transcoding' reset would strand the job forever.)
+ */
 export async function resetStaleActiveJobs(): Promise<number> {
   const placeholders = ACTIVE_STATES.map(() => '?').join(',');
   const res = await tExec(
     `UPDATE bunny_transfer_jobs
-        SET state = CASE WHEN new_video_guid IS NOT NULL THEN 'transcoding' ELSE 'pending' END,
-            worker_id = NULL
+        SET state = 'pending', worker_id = NULL, attempts = 0, error = NULL
       WHERE state IN (${placeholders})`,
     [...ACTIVE_STATES],
   );

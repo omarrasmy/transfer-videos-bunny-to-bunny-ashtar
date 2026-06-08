@@ -8,6 +8,7 @@ import { pendingMapCount } from './activities.js';
 import { pendingSecondDbMapCount } from './seconddb.js';
 import { startServer } from './server.js';
 import { fetchVideo, getVideo, resolveSourceUrl, verifyWatchable, deleteVideo } from './bunny.js';
+import { processJob } from './worker.js';
 import { log } from './logger.js';
 import type { JobRow } from './types.js';
 
@@ -214,6 +215,23 @@ async function main() {
     if (mode === 'serve') { await recordRun('serve'); startServer(); return; /* keep alive */ }
 
     if (mode === 'test-one') { await testOne(rest); await closePools(); return; }
+
+    if (mode === 'run-job') {
+      banner('run-job');
+      const id = Number(rest[0]);
+      if (!id) { console.log('Usage: run-job <jobId>'); await closePools(); return; }
+      if (!config.live) { console.log('Refusing: LIVE=false.'); await closePools(); return; }
+      if (!(await acquireRunLock())) { console.log('Another run holds the lock.'); await closePools(); return; }
+      const job = await getJob(id);
+      if (!job) { console.log(`No job #${id}.`); await releaseRunLock(); await closePools(); return; }
+      console.log(`Processing job #${id} (${job.source_video_guid})...`);
+      try { await processJob(job, { workerId: 1, abort: { aborted: false } }); }
+      catch (e) { console.error('job error:', (e as Error).message); }
+      await printStats();
+      await releaseRunLock();
+      await closePools();
+      return;
+    }
 
     if (mode === 'delete-phase') { await recordRun('delete-phase'); await deletePhase(); await printStats(); await closePools(); return; }
 

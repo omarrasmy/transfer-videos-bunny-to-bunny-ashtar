@@ -164,6 +164,50 @@ export async function scan(linkage: Linkage = (process.env.LINKAGE as Linkage) |
     }
   }
 
+  // ---- EXPAND: map EVERY blb.activities row that still references each job's source video ----
+  // The selection (teachers / INCLUDE_ACTIVITY_IDS) decides WHICH videos to migrate, but once a
+  // video is migrated its 655017 source is deleted, so ALL activities pointing at it must follow —
+  // not just the selected ones. (Mirrors leg-2, which already covers every reference by GUID.)
+  const allJobs = await tQuery<(RowDataPacket & { id: number; lib: number; guid: string })[]>(
+    `SELECT id, source_library_id lib, source_video_guid guid FROM bunny_transfer_jobs`,
+  );
+  const jobIdByPair = new Map<string, number>();
+  for (const j of allJobs) jobIdByPair.set(`${j.lib}::${j.guid}`, j.id);
+  const pairs = allJobs.map((j) => [j.lib, j.guid] as [number, string]);
+  const CHUNK = 400;
+  for (let i = 0; i < pairs.length; i += CHUNK) {
+    const chunk = pairs.slice(i, i + CHUNK);
+    const ph = chunk.map(() => '(?,?)').join(',');
+    const refs = await blbQuery<ActivityRow[]>(
+      `SELECT id, bunny_library_id, bunny_video_id, bunny_collection_id, title
+         FROM activities WHERE (bunny_library_id, bunny_video_id) IN (${ph})`,
+      chunk.flat(),
+    );
+    for (const r of refs) {
+      const jobId = jobIdByPair.get(`${r.bunny_library_id}::${(r.bunny_video_id ?? '').trim()}`);
+      if (!jobId) continue;
+      await tExec(
+        `INSERT INTO bunny_transfer_activity_map
+           (job_id, activity_id, old_library_id, old_video_guid, old_collection_id, status)
+         VALUES (?, ?, ?, ?, ?, 'pending')
+         ON DUPLICATE KEY UPDATE
+           status = IF(job_id <> VALUES(job_id) OR old_video_guid <> VALUES(old_video_guid), 'pending', status),
+           new_library_id = IF(job_id <> VALUES(job_id) OR old_video_guid <> VALUES(old_video_guid), NULL, new_library_id),
+           new_video_guid = IF(job_id <> VALUES(job_id) OR old_video_guid <> VALUES(old_video_guid), NULL, new_video_guid),
+           old_library_id = VALUES(old_library_id),
+           old_collection_id = VALUES(old_collection_id),
+           old_video_guid = VALUES(old_video_guid),
+           job_id = VALUES(job_id)`,
+        [jobId, r.id, r.bunny_library_id, r.bunny_video_id, r.bunny_collection_id],
+      );
+    }
+  }
+  // activity_count reflects the full reference set.
+  await tExec(
+    `UPDATE bunny_transfer_jobs j
+        SET activity_count = (SELECT COUNT(*) FROM bunny_transfer_activity_map m WHERE m.job_id = j.id)`,
+  );
+
   // Re-open completed jobs that have gained new (un-migrated) activity rows since they finished.
   // They resume from polling (new_video_guid is set) and repoint only the new pending rows.
   const reopened = await tExec(
