@@ -15,6 +15,7 @@
     "stats": "tsx src/index.ts stats"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.21.0",
     "dotenv": "^17.4.2",
     "mysql2": "^3.22.5"
   },

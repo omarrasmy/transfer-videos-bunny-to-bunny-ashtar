@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS bunny_transfer_jobs (
   dest_collection_id VARCHAR(64) NULL,
   new_video_guid VARCHAR(64) NULL,
   source_url VARCHAR(900) NULL,
+  source_path VARCHAR(900) NULL,
   source_status INT NULL,
   dest_status INT NULL,
   encode_progress INT NULL DEFAULT 0,
@@ -149,8 +150,9 @@ CREATE TABLE IF NOT EXISTS bunny_transfer_seconddb_map (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 `;
 
-// Leg-2 columns added to the existing jobs table (idempotent).
+// Columns added to the existing jobs table after the first release (idempotent: dup-column ignored).
 const JOB_LEG2_COLUMNS = [
+  `ADD COLUMN source_path VARCHAR(900) NULL`,
   `ADD COLUMN second_db_present TINYINT NOT NULL DEFAULT 0`,
   `ADD COLUMN second_db_row_count INT NOT NULL DEFAULT 0`,
   `ADD COLUMN second_db_rows_updated INT NOT NULL DEFAULT 0`,

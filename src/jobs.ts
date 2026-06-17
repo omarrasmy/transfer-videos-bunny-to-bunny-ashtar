@@ -6,7 +6,7 @@ import { ACTIVE_STATES, type JobRow, type JobState } from './types.js';
 type Row<T> = RowDataPacket & T;
 
 const COLUMN_ALLOWLIST = new Set([
-  'source_collection_id', 'title', 'new_video_guid', 'source_url', 'source_status',
+  'source_collection_id', 'title', 'new_video_guid', 'source_url', 'source_path', 'source_status',
   'dest_status', 'encode_progress', 'state', 'attempts', 'activity_count',
   'activity_updated_count', 'size_bytes', 'error', 'worker_id',
   'started_at', 'fetched_at', 'ready_at', 'db_updated_at', 'deleted_at',

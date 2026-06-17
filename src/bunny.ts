@@ -156,10 +156,13 @@ export async function probeFile(host: string, path: string): Promise<{ ok: boole
 }
 
 export interface ResolvedSource {
-  url: string;
-  via: string;          // 'original' | 'play_720p.mp4' | ...
+  url: string;          // the URL Bunny should fetch (a CDN URL, or a GCS V4 signed URL)
+  via: string;          // 'original' | 'play_720p.mp4' | 'gcs:<bucket>'
   sizeBytes: number | null;
-  referer: string;
+  referer: string;      // sent as the Referer header; '' (omitted) for signed GCS URLs
+  // What to persist in jobs.source_url. For GCS this is a short, stable `gcs://bucket/key` ref
+  // (the signed URL is huge + expires); defaults to `url` when omitted.
+  persistUrl?: string;
 }
 
 /**

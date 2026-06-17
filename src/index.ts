@@ -1,5 +1,5 @@
 import type { RowDataPacket } from 'mysql2';
-import { config, configSummary, sourceCreds, assertSecondDbConfig } from './config.js';
+import { config, configSummary, sourceCreds, assertSecondDbConfig, assertGcsConfig } from './config.js';
 import { migrate as migrateDb, closePools, tExec, tQuery, acquireRunLock, releaseRunLock } from './db.js';
 import { scan } from './scan.js';
 import { runLive, runSimulation, requestAbort, abort } from './pool.js';
@@ -7,8 +7,8 @@ import { resetStaleActiveJobs, stateCounts, getJob, updateJob } from './jobs.js'
 import { pendingMapCount } from './activities.js';
 import { pendingSecondDbMapCount } from './seconddb.js';
 import { startServer } from './server.js';
-import { fetchVideo, getVideo, resolveSourceUrl, verifyWatchable, deleteVideo } from './bunny.js';
-import { processJob } from './worker.js';
+import { fetchVideo, getVideo, verifyWatchable, deleteVideo } from './bunny.js';
+import { processJob, resolveJobSource } from './worker.js';
 import { log } from './logger.js';
 import type { JobRow } from './types.js';
 
@@ -80,14 +80,14 @@ async function testOne(argv: string[]) {
 
   const creds = sourceCreds(job.source_library_id)!;
   console.log(`Testing job #${job.id}  src lib ${job.source_library_id}  guid ${job.source_video_guid}`);
-  const src = await getVideo(creds, job.source_video_guid);
-  if (!src) { console.log('Source 404 — pick another.'); return; }
-  const resolved = await resolveSourceUrl(creds, src);
-  if (!resolved) { console.log(`Source not fetchable (status ${src.status}).`); return; }
-  console.log(`Source: "${src.title}" via ${resolved.via} (${resolved.sizeBytes} bytes)\n  ${resolved.url}`);
+  // Same resolution the worker uses: Bunny source first, then the GCS fallback via video_source_path.
+  const { resolved, title } = await resolveJobSource(job, creds);
+  if (!resolved) { console.log(`Source not available in Bunny or GCS (path: ${job.source_path ?? 'none'}). Pick another.`); return; }
+  const fromGcs = resolved.via.startsWith('gcs:');
+  console.log(`Source: "${title}" via ${resolved.via}${fromGcs ? ' [GCS fallback]' : ''} (${resolved.sizeBytes} bytes)\n  ${resolved.persistUrl ?? resolved.url}`);
 
   console.log('\n→ Fetching into destination...');
-  const fr = await fetchVideo(config.dest, { url: resolved.url, headers: { Referer: resolved.referer }, title: `[TEST] ${src.title}`, collectionId: config.dest.collectionId });
+  const fr = await fetchVideo(config.dest, { url: resolved.url, headers: resolved.referer ? { Referer: resolved.referer } : {}, title: `[TEST] ${title}`, collectionId: config.dest.collectionId });
   console.log('  fetch HTTP', fr.httpStatus, '| guid from response:', fr.guid ?? '(none)');
   console.log('  raw response:', JSON.stringify(fr.raw));
   await log.info('test-one fetch', { jobId: job.id, event: 'test_fetch', data: fr });
@@ -99,7 +99,7 @@ async function testOne(argv: string[]) {
     const { listVideos } = await import('./bunny.js');
     for (let i = 0; i < 8 && !guid; i++) {
       const { items } = await listVideos(config.dest, { perPage: 100, collectionId: config.dest.collectionId, orderBy: 'date' });
-      guid = items.find((v) => v.title === `[TEST] ${src.title}`)?.guid ?? null;
+      guid = items.find((v) => v.title === `[TEST] ${title}`)?.guid ?? null;
       if (!guid) await sleep(3000);
     }
   }
@@ -199,6 +199,7 @@ async function main() {
 
     await migrateDb();
     assertSecondDbConfig();
+    assertGcsConfig();
 
     if (mode === 'migrate') { console.log('transfer DB tables ready.'); await closePools(); return; }
     if (mode === 'stats') { await printStats(); await closePools(); return; }

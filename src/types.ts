@@ -26,6 +26,7 @@ export interface JobRow {
   dest_collection_id: string | null;
   new_video_guid: string | null;
   source_url: string | null;
+  source_path: string | null;   // activities.video_source_path — the GCS object key for the fallback
   source_status: number | null;
   dest_status: number | null;
   encode_progress: number | null;

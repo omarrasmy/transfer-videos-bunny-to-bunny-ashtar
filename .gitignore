@@ -2,3 +2,9 @@ node_modules/
 .env
 _probe/
 *.log
+
+# GCS service-account keys (private keys — never commit)
+firbasesec.json
+ashtar-a3c78-1cfaf78133a6.json
+*.serviceaccount.json
+diag*.mjs

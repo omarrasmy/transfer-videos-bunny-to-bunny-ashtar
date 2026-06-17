@@ -12,7 +12,7 @@ const DASH = fileURLToPath(new URL('../public/dashboard.html', import.meta.url))
 
 const JOB_COLS = `id, source_library_id, source_video_guid, new_video_guid, title, state,
   dest_status, encode_progress, attempts, activity_count, activity_updated_count,
-  size_bytes, error, worker_id, source_url,
+  size_bytes, error, worker_id, source_url, source_path,
   started_at, fetched_at, ready_at, db_updated_at, deleted_at, updated_at, created_at`;
 
 async function status() {

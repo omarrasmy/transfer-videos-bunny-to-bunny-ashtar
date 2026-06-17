@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { existsSync, readFileSync } from 'node:fs';
 
 function req(name: string): string {
   const v = process.env[name];
@@ -24,6 +25,25 @@ function int(name: string, fallback: number): number {
 
 export interface DbConfig {
   host: string; port: number; user: string; password: string; database: string;
+}
+
+/** A GCS fallback route: when a video's `video_source_path` contains `match`, fetch the
+ *  original from `bucket` using the service-account `keyFile`. */
+export interface GcsRoute { match: string; bucket: string; keyFile: string; }
+
+/**
+ * Parse GCS_ROUTES of the form `keyword:bucket:keyfile,keyword:bucket:keyfile`.
+ * e.g. `blb:blb_2025:firbasesec.json,ashtar:ems-new:ashtar-a3c78-1cfaf78133a6.json`
+ */
+function gcsRoutes(): GcsRoute[] {
+  const raw = opt('GCS_ROUTES');
+  if (!raw) return [];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean).map((entry) => {
+    const [match, bucket, ...rest] = entry.split(':');
+    const keyFile = rest.join(':'); // tolerate ':' in a path (e.g. Windows C:\...)
+    if (!match || !bucket || !keyFile) throw new Error(`Bad GCS_ROUTES entry "${entry}" (expected keyword:bucket:keyfile)`);
+    return { match: match.trim().toLowerCase(), bucket: bucket.trim(), keyFile: keyFile.trim() };
+  });
 }
 export interface LibraryCreds {
   id: number;
@@ -104,6 +124,19 @@ export const config = {
 
   sources: sourceLibs(),
 
+  // GCS fallback: when a source video is gone/broken in Bunny but the activities row carries a
+  // `video_source_path`, fetch the original from the matching Google Cloud Storage bucket instead.
+  // Opt-in (default off) like the other optional features. Routes are parsed only when enabled, so a
+  // stale/bad GCS_ROUTES can't abort unrelated commands while the feature is turned off.
+  gcs: ((enabled: boolean) => ({
+    enabled,
+    routes: enabled ? gcsRoutes() : [],
+    // V4 signed-URL lifetime — must outlast Bunny's pull of a multi-GB file. Max 7 days.
+    signedUrlTtlMs: Math.min(int('GCS_SIGNED_URL_TTL_HOURS', 24), 24 * 7) * 3_600_000,
+    // Re-open already-skipped (source-unavailable) jobs that now have a routable path, so a run retries them via GCS.
+    reopenSkipped: bool('GCS_REOPEN_SKIPPED', true),
+  }))(bool('ENABLE_GCS_FALLBACK', false)),
+
   concurrency: int('CONCURRENCY', 8),
   // Master switch: when false, `run` simulates and performs NO Bunny/blb writes.
   live: bool('LIVE', false),
@@ -144,7 +177,29 @@ export function configSummary() {
     dest2Collection: config.enableSecondDb ? config.dest2.collectionId : null,
     secondDbHost: config.enableSecondDb ? config.secondDb.host : null,
     includeActivityIds: config.includeActivityIds,
+    gcsFallback: config.gcs.enabled,
+    gcsRoutes: config.gcs.routes.map((r) => `${r.match}->${r.bucket}`),
   };
+}
+
+/** Validate GCS fallback config when enabled: at least one route, and every key file exists + parses
+ *  as a service account (so a bad path/credential fails fast at startup, not per-job at fetch time). */
+export function assertGcsConfig(): void {
+  if (!config.gcs.enabled) return;
+  if (config.gcs.routes.length === 0) {
+    throw new Error('ENABLE_GCS_FALLBACK=true but GCS_ROUTES is empty (expected keyword:bucket:keyfile,...)');
+  }
+  for (const r of config.gcs.routes) {
+    if (!existsSync(r.keyFile)) {
+      throw new Error(`GCS route "${r.match}->${r.bucket}": key file not found: ${r.keyFile} (resolved against ${process.cwd()})`);
+    }
+    try {
+      const sa = JSON.parse(readFileSync(r.keyFile, 'utf8')) as { client_email?: string; private_key?: string };
+      if (!sa.client_email || !sa.private_key) throw new Error('missing client_email/private_key');
+    } catch (e) {
+      throw new Error(`GCS route "${r.match}->${r.bucket}": invalid service-account key file ${r.keyFile}: ${(e as Error).message}`);
+    }
+  }
 }
 
 /** Validate that leg-2 config is complete when enabled. Throws with a clear message otherwise. */

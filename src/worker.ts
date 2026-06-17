@@ -1,5 +1,6 @@
-import { config, sourceCreds } from './config.js';
-import { getVideo, fetchVideo, deleteVideo, resolveSourceUrl, verifyWatchable, updateVideoTitle, findVideosByTitleContains } from './bunny.js';
+import { config, sourceCreds, type LibraryCreds } from './config.js';
+import { getVideo, fetchVideo, deleteVideo, resolveSourceUrl, verifyWatchable, updateVideoTitle, findVideosByTitleContains, type ResolvedSource } from './bunny.js';
+import { resolveGcsSource, isGcsRef } from './gcs.js';
 import { setState, updateJob } from './jobs.js';
 import { updateActivitiesForJob, updatedCountForJob, pendingMapCount, syncBunnyVideosTrace } from './activities.js';
 import { updateSecondDbForJob, secondDbUpdatedCount, pendingSecondDbMapCount, syncVideoTransfersTrace } from './seconddb.js';
@@ -19,6 +20,42 @@ const markerFor = (jobId: number) => `[mig#${jobId}]`;
 
 export interface WorkerCtx { workerId: number; abort: { aborted: boolean }; }
 
+interface JobSource { resolved: ResolvedSource | null; srcStatus: number | null; title: string; bunny404: boolean; }
+
+/**
+ * Resolve a fetchable source for a job. Prefers the Bunny source video (original / play_*.mp4); when
+ * that is gone (404), broken (status 5/6) or unfetchable, falls back to the original in GCS via the
+ * job's `source_path`. Returns `resolved: null` only when neither path yields anything.
+ */
+export async function resolveJobSource(job: JobRow, creds: LibraryCreds | undefined): Promise<JobSource> {
+  let title = job.title ?? '';
+  let srcStatus: number | null = null;
+  let bunny404 = false;
+
+  // Only consult Bunny when the source library has usable credentials; otherwise go straight to GCS
+  // (getVideo with an empty key would throw). A credless source is treated as "not in Bunny".
+  const hasCreds = !!creds && !!creds.apiKey && !!creds.cdnHost;
+  if (hasCreds) {
+    const srcVideo = await getVideo(creds, job.source_video_guid);
+    if (srcVideo) {
+      srcStatus = srcVideo.status;
+      title = (srcVideo.title || title || job.source_video_guid).slice(0, 700);
+      if (srcVideo.status !== 5 && srcVideo.status !== 6) {
+        const r = await resolveSourceUrl(creds, srcVideo);
+        if (r) return { resolved: r, srcStatus, title, bunny404: false };
+      }
+    } else {
+      bunny404 = true;
+    }
+  } else {
+    bunny404 = true;
+  }
+
+  // Bunny source missing / unusable / unfetchable / credless -> try the GCS original.
+  const g = await resolveGcsSource(job.source_path);
+  return { resolved: g, srcStatus, title: title || job.source_video_guid, bunny404 };
+}
+
 /** Run a single job through the full lifecycle. Resumable: a job with new_video_guid skips re-fetch. */
 export async function processJob(job: JobRow, ctx: WorkerCtx): Promise<void> {
   const creds = sourceCreds(job.source_library_id);
@@ -37,33 +74,32 @@ export async function processJob(job: JobRow, ctx: WorkerCtx): Promise<void> {
   // ---- 1. RESOLVE + FETCH (skipped entirely when resuming an already-fetched job) ----
   if (!newGuid) {
     await setState(job.id, 'resolving', { worker_id: ctx.workerId });
-    const srcVideo = await getVideo(creds, job.source_video_guid);
-    if (!srcVideo) {
-      await setState(job.id, 'skipped', { error: 'source video not found (404)' });
-      await log.warn('skipped: source 404', { ...tag, event: 'skip' });
-      return;
-    }
-    if (srcVideo.status === 5 || srcVideo.status === 6) {
-      await setState(job.id, 'skipped', { error: `source unusable (status ${srcVideo.status})`, source_status: srcVideo.status });
-      await log.warn(`skipped: source status ${srcVideo.status}`, { ...tag, event: 'skip' });
-      return;
-    }
-    title = (srcVideo.title || title || job.source_video_guid).slice(0, 700);
-    const resolved = await resolveSourceUrl(creds, srcVideo);
+    const src = await resolveJobSource(job, creds);
+    const resolved = src.resolved;
+    title = src.title;
     if (!resolved) {
-      await setState(job.id, 'skipped', { error: `source not fetchable (status ${srcVideo.status})`, source_status: srcVideo.status });
-      await log.warn(`skipped: unfetchable source (status ${srcVideo.status})`, { ...tag, event: 'skip' });
+      // Neither Bunny nor GCS could yield the source: terminal. The 'unrecoverable:' prefix keeps
+      // scan's GCS re-open filter from picking it up again (no infinite retry loop).
+      const base = src.bunny404 ? 'source 404'
+        : (src.srcStatus === 5 || src.srcStatus === 6) ? `source unusable (status ${src.srcStatus})`
+        : `source not fetchable (status ${src.srcStatus ?? '?'})`;
+      const why = `unrecoverable: ${base}${job.source_path ? ' and GCS object missing' : ' and no source_path'}`;
+      await setState(job.id, 'skipped', { error: why, source_status: src.srcStatus });
+      await log.warn(`skipped: ${why}`, { ...tag, event: 'skip' });
       return;
     }
-    await updateJob(job.id, { source_status: srcVideo.status, source_url: resolved.url, size_bytes: resolved.sizeBytes, title });
-    await log.info(`resolved via ${resolved.via} (${fmtBytes(resolved.sizeBytes)})`, { ...tag, event: 'resolve', data: { url: resolved.url, via: resolved.via } });
+    const fromGcs = resolved.via.startsWith('gcs:');
+    const persistUrl = resolved.persistUrl ?? resolved.url;
+    await updateJob(job.id, { source_status: src.srcStatus, source_url: persistUrl, size_bytes: resolved.sizeBytes, title });
+    await log.info(`resolved via ${resolved.via} (${fmtBytes(resolved.sizeBytes)})${fromGcs ? ' [GCS fallback]' : ''}`,
+      { ...tag, event: fromGcs ? 'gcs_resolve' : 'resolve', data: { url: persistUrl, via: resolved.via } });
 
     // ---- SIMULATION: stop before any write ----
     if (!config.live) {
       await setState(job.id, 'pending', {});
       await log.info('SIMULATION: would fetch -> poll -> update db -> delete', {
         ...tag, event: 'simulate',
-        data: { wouldFetch: resolved.url, wouldUpdateDb: config.enableDbUpdate, wouldDelete: config.enableSourceDelete },
+        data: { wouldFetch: persistUrl, via: resolved.via, wouldUpdateDb: config.enableDbUpdate, wouldDelete: config.enableSourceDelete },
       });
       return;
     }
@@ -83,7 +119,8 @@ export async function processJob(job: JobRow, ctx: WorkerCtx): Promise<void> {
 
     if (!newGuid) {
       await setState(job.id, 'fetching', {});
-      const fr = await fetchVideo(dest, { url: resolved.url, headers: { Referer: resolved.referer }, title: `${cleanTitle} ${marker}`, collectionId: dest.collectionId });
+      // A signed GCS URL carries its own auth; send a Referer only for referer-protected CDN pulls.
+      const fr = await fetchVideo(dest, { url: resolved.url, headers: resolved.referer ? { Referer: resolved.referer } : {}, title: `${cleanTitle} ${marker}`, collectionId: dest.collectionId });
       await log.info(`fetch submitted (http ${fr.httpStatus}, guid ${fr.guid ?? 'none'})`, { ...tag, event: 'fetch', data: fr.raw });
       newGuid = fr.guid ?? (await findVideosByTitleContains(dest, dest.collectionId, marker))[0]?.guid ?? null;
       if (!newGuid) {
@@ -160,14 +197,15 @@ export async function processJob(job: JobRow, ctx: WorkerCtx): Promise<void> {
     const dest2 = config.dest2;
     let newGuid2 = job.new_video_guid_2;
 
-    // Need a fetchable source URL (persisted during resolve; re-resolve if missing).
+    // Need a fetchable source URL. Re-resolve when we have none, or when the persisted source is a
+    // GCS marker (a signed URL is short-lived and never stored) — yields a fresh Bunny or GCS URL.
     let srcUrl = job.source_url;
-    let referer = `https://${creds.cdnHost}/`;
-    if (!srcUrl) {
-      const sv = await getVideo(creds, job.source_video_guid);
-      const rs = sv ? await resolveSourceUrl(creds, sv) : null;
-      if (!rs) { await setState(job.id, 'failed', { error: 'leg2: source not resolvable' }); await log.error('leg2: source not resolvable', { ...tag, event: 'fetch2_fail' }); return; }
-      srcUrl = rs.url; referer = rs.referer;
+    let srcPersist = job.source_url;  // stable ref to store (never the giant/short-lived signed URL)
+    let referer = creds.cdnHost ? `https://${creds.cdnHost}/` : '';
+    if (!srcUrl || isGcsRef(srcUrl)) {
+      const { resolved } = await resolveJobSource(job, creds);
+      if (!resolved) { await setState(job.id, 'failed', { error: 'leg2: source not resolvable' }); await log.error('leg2: source not resolvable', { ...tag, event: 'fetch2_fail' }); return; }
+      srcUrl = resolved.url; referer = resolved.referer; srcPersist = resolved.persistUrl ?? resolved.url;
     }
 
     if (!newGuid2) {
@@ -179,12 +217,12 @@ export async function processJob(job: JobRow, ctx: WorkerCtx): Promise<void> {
       }
       if (!newGuid2) {
         await setState(job.id, 'fetching', {});
-        const fr2 = await fetchVideo(dest2, { url: srcUrl, headers: { Referer: referer }, title: `${cleanTitle2} ${marker2}`, collectionId: dest2.collectionId });
+        const fr2 = await fetchVideo(dest2, { url: srcUrl, headers: referer ? { Referer: referer } : {}, title: `${cleanTitle2} ${marker2}`, collectionId: dest2.collectionId });
         await log.info(`leg2 fetch (http ${fr2.httpStatus}, guid ${fr2.guid ?? 'none'})`, { ...tag, event: 'fetch2', data: fr2.raw });
         newGuid2 = fr2.guid ?? (await findVideosByTitleContains(dest2, dest2.collectionId, marker2))[0]?.guid ?? null;
         if (!newGuid2) { await setState(job.id, 'failed', { error: 'leg2 fetch returned no guid' }); await log.error('leg2 fetch: no guid', { ...tag, event: 'fetch2_fail' }); return; }
       }
-      await updateJob(job.id, { new_video_guid_2: newGuid2, fetched2_at: new Date(), dest2_status: 0, dest2_encode_progress: 0, dest2_collection_id: dest2.collectionId, dest2_url: srcUrl });
+      await updateJob(job.id, { new_video_guid_2: newGuid2, fetched2_at: new Date(), dest2_status: 0, dest2_encode_progress: 0, dest2_collection_id: dest2.collectionId, dest2_url: srcPersist });
       try { await updateVideoTitle(dest2, newGuid2, cleanTitle2); } catch (e) { await log.warn(`leg2 title cleanup failed: ${(e as Error).message}`, { ...tag, event: 'rename2_fail' }); }
     }
 
